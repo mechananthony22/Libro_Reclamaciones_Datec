@@ -1,0 +1,873 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
+
+// Definición de tipos para establecimientos comerciales asociados al proveedor
+interface Establecimiento {
+    id: number;
+    codigo: string;
+    nombre: string;
+    direccion: string;
+    es_principal: boolean;
+}
+
+// Catálogo de tipos de documento de identidad admitidos
+interface TipoDocumento {
+    value: string;
+    label: string;
+    longitud: number | null;
+}
+
+// Opciones de tipo de bien contratado
+interface TipoBienItem {
+    value: string;
+    label: string;
+    descripcion: string;
+}
+
+// Propiedades recibidas desde el controlador de Laravel
+interface Props {
+    empresa: {
+        name: string;
+        razon_social: string;
+        ruc: string;
+        direccion: string;
+        email: string | null;
+        telefono: string | null;
+        logo_path: string | null;
+        color_primario: string;
+        slug: string;
+    };
+    establecimientos: Establecimiento[];
+    tipos_documento: TipoDocumento[];
+    tipos_bien: TipoBienItem[];
+}
+
+const props = defineProps<Props>();
+const page = usePage();
+
+// Control de navegación por pasos y visibilidad del formulario interactivo
+const pasoActual = ref<number>(1);
+const mostrarFormulario = ref<boolean>(false);
+
+// Establecer por defecto el establecimiento principal de la empresa si existe
+const establecimientoDefault = computed(() => {
+    if (!props.establecimientos || props.establecimientos.length === 0) return null;
+    const principal = props.establecimientos.find((e) => e.es_principal);
+    return principal ? principal.id : props.establecimientos[0].id;
+});
+
+// Inicialización del formulario reactivo con Inertia useForm
+const form = useForm({
+    // Sección 1: Datos de identificación y contacto del consumidor
+    tipo_documento: 'dni',
+    numero_documento: '',
+    nombres: '',
+    apellidos: '',
+    email: '',
+    telefono: '',
+    direccion: '',
+    departamento: '',
+    provincia: '',
+    distrito: '',
+
+    // Sección condicional: Datos del apoderado o tutor si el consumidor es menor de edad
+    es_menor_edad: false,
+    apoderado_nombre: '',
+    apoderado_tipo_documento: 'dni',
+    apoderado_numero_documento: '',
+    apoderado_telefono: '',
+    apoderado_email: '',
+
+    // Sección 2: Identificación del bien o servicio materia de la reclamación
+    establecimiento_id: establecimientoDefault.value,
+    tipo_bien: 'producto',
+    descripcion_bien: '',
+    monto_reclamado: '',
+    moneda: 'PEN',
+    numero_comprobante: '',
+    fecha_contratacion: '',
+});
+
+// Captura de mensaje de confirmación flash enviado desde el servidor
+const flashSuccess = computed(() => {
+    return (page.props as any).flash?.success || null;
+});
+
+// Restricción de longitud según el tipo de documento seleccionado
+const longitudMaximaDoc = computed(() => {
+    if (form.tipo_documento === 'dni') return 8;
+    if (form.tipo_documento === 'ruc') return 11;
+    return 15;
+});
+
+// Texto de ayuda para orientar al consumidor sobre el formato del documento
+const placeholderDoc = computed(() => {
+    if (form.tipo_documento === 'dni') return '8 dígitos (ej. 45678912)';
+    if (form.tipo_documento === 'ruc') return '11 dígitos (ej. 20123456789)';
+    if (form.tipo_documento === 'ce') return 'Carné de extranjería';
+    return 'Número de pasaporte';
+});
+
+// Inicia el flujo del formulario interactivo
+const iniciarRegistro = () => {
+    mostrarFormulario.value = true;
+    pasoActual.value = 1;
+};
+
+// Validación previa del lado del cliente para los datos del consumidor antes de avanzar al paso 2
+const validarPasoConsumidor = () => {
+    form.clearErrors();
+    let valido = true;
+
+    if (!form.numero_documento.trim()) {
+        form.setError('numero_documento', 'Ingresa el número de documento.');
+        valido = false;
+    } else if (form.tipo_documento === 'dni' && !/^[0-9]{8}$/.test(form.numero_documento.trim())) {
+        form.setError('numero_documento', 'El DNI debe contener exactamente 8 dígitos.');
+        valido = false;
+    } else if (form.tipo_documento === 'ruc' && !/^[0-9]{11}$/.test(form.numero_documento.trim())) {
+        form.setError('numero_documento', 'El RUC debe contener exactamente 11 dígitos.');
+        valido = false;
+    }
+
+    if (!form.nombres.trim()) {
+        form.setError('nombres', 'Los nombres son obligatorios.');
+        valido = false;
+    }
+
+    if (form.tipo_documento !== 'ruc' && !form.apellidos.trim()) {
+        form.setError('apellidos', 'Los apellidos son obligatorios.');
+        valido = false;
+    }
+
+    if (!form.email.trim()) {
+        form.setError('email', 'El correo electrónico es requerido.');
+        valido = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        form.setError('email', 'Ingresa un correo electrónico válido.');
+        valido = false;
+    }
+
+    if (!form.telefono.trim()) {
+        form.setError('telefono', 'El teléfono es obligatorio.');
+        valido = false;
+    }
+
+    if (!form.direccion.trim()) {
+        form.setError('direccion', 'La dirección es obligatoria.');
+        valido = false;
+    }
+
+    // Validar datos obligatorios del representante si el consumidor es menor de edad
+    if (form.es_menor_edad) {
+        if (!form.apoderado_nombre.trim()) {
+            form.setError('apoderado_nombre', 'Ingresa los nombres del padre, madre o apoderado.');
+            valido = false;
+        }
+        if (!form.apoderado_numero_documento.trim()) {
+            form.setError('apoderado_numero_documento', 'Ingresa el documento del apoderado.');
+            valido = false;
+        }
+    }
+
+    if (valido) {
+        pasoActual.value = 2;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+};
+
+// Envío seguro del formulario completo al endpoint público de registro
+const enviarRegistro = () => {
+    form.post(`/l/${props.empresa.slug}/registrar`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            form.reset();
+            pasoActual.value = 1;
+            mostrarFormulario.value = false;
+        },
+    });
+};
+</script>
+
+<template>
+    <div class="min-h-screen bg-slate-50 text-slate-800 antialiased flex flex-col justify-between">
+        <Head :title="`Libro de Reclamaciones Virtual - ${empresa.name}`">
+            <meta name="robots" content="noindex, nofollow" />
+        </Head>
+
+        <!-- Cabecera Institucional del Proveedor Reclamado -->
+        <header class="border-b border-slate-200 bg-white shadow-xs sticky top-0 z-30">
+            <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+                <!-- Logotipo e Identidad de la Empresa -->
+                <div class="flex items-center gap-3">
+                    <div
+                        v-if="!empresa.logo_path"
+                        class="flex h-11 w-11 items-center justify-center rounded-xl text-white font-bold text-base shadow-xs"
+                        :style="{ backgroundColor: empresa.color_primario }"
+                    >
+                        {{ empresa.name.charAt(0).toUpperCase() }}
+                    </div>
+                    <img
+                        v-else
+                        :src="empresa.logo_path"
+                        :alt="empresa.name"
+                        class="h-10 max-w-[150px] object-contain"
+                    />
+
+                    <div>
+                        <h1 class="font-bold text-slate-900 text-base sm:text-lg leading-tight">{{ empresa.name }}</h1>
+                        <p class="text-xs text-slate-500 font-mono">RUC: {{ empresa.ruc }}</p>
+                    </div>
+                </div>
+
+                <!-- Distintivo oficial del Libro de Reclamaciones -->
+                <div class="flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50/70 px-3.5 py-1 text-xs font-semibold text-blue-900">
+                    <svg class="h-4 w-4 text-blue-600 hidden sm:inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Libro Virtual</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Mensaje de confirmación de registro exitoso -->
+        <div v-if="flashSuccess" class="mx-auto max-w-5xl px-4 pt-6 sm:px-6 w-full">
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-xs flex items-start gap-3 text-emerald-900">
+                <svg class="h-6 w-6 text-emerald-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-sm">
+                    <p class="font-bold text-emerald-950">Registro completado con éxito</p>
+                    <p class="mt-1 text-emerald-800">{{ flashSuccess }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido Principal -->
+        <main class="mx-auto max-w-5xl px-4 py-8 sm:px-6 grow w-full">
+            <div class="space-y-6">
+
+                <!-- Vista Inicial: Bienvenida, Base Legal y Datos del Proveedor -->
+                <div v-if="!mostrarFormulario" class="space-y-6">
+                    <!-- Introducción y Marco Normativo de INDECOPI -->
+                    <div class="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8 shadow-xs">
+                        <div class="inline-flex items-center gap-2 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 mb-3">
+                            <span>Conforme al D.S. N° 011-2011-PCM • INDECOPI</span>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+                            Libro de Reclamaciones Virtual
+                        </h2>
+                        <p class="mt-2 text-sm text-slate-600 max-w-3xl leading-relaxed">
+                            Conforme a lo establecido en el Código de Protección y Defensa del Consumidor, ponemos a tu disposición nuestro formulario virtual para el ingreso de reclamaciones o quejas sobre los productos o servicios contratados.
+                        </p>
+                    </div>
+
+                    <!-- Datos Legales del Proveedor Reclamado (Razón social, RUC, Domicilio) -->
+                    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">
+                            1. Identificación del Proveedor Reclamado
+                        </h3>
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-500">Razón Social:</span>
+                                <span class="font-medium text-slate-900">{{ empresa.razon_social }}</span>
+                            </div>
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-500">Número de RUC:</span>
+                                <span class="font-mono font-medium text-slate-900">{{ empresa.ruc }}</span>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <span class="block text-xs font-semibold text-slate-500">Domicilio Legal:</span>
+                                <span class="font-medium text-slate-900">{{ empresa.direccion }}</span>
+                            </div>
+                            <div v-if="empresa.email">
+                                <span class="block text-xs font-semibold text-slate-500">Correo Electrónico:</span>
+                                <span class="font-medium text-slate-900">{{ empresa.email }}</span>
+                            </div>
+                            <div v-if="empresa.telefono">
+                                <span class="block text-xs font-semibold text-slate-500">Teléfono:</span>
+                                <span class="font-medium text-slate-900">{{ empresa.telefono }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cuadros informativos: Diferencia entre Reclamo y Queja -->
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">R</span>
+                                <h4 class="font-bold text-slate-900 text-sm">¿Qué es un Reclamo?</h4>
+                            </div>
+                            <p class="mt-2 text-xs text-slate-600 leading-relaxed">
+                                Disconformidad relacionada directamente a los bienes adquiridos o a los servicios contratados con nuestro comercio.
+                            </p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">Q</span>
+                                <h4 class="font-bold text-slate-900 text-sm">¿Qué es una Queja?</h4>
+                            </div>
+                            <p class="mt-2 text-xs text-slate-600 leading-relaxed">
+                                Malestar o descontento respecto a la atención recibida por parte del personal o disconformidad que no tiene relación directa con el bien o servicio.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta de acción para iniciar el llenado del formulario -->
+                    <div class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 text-center shadow-xs">
+                        <h3 class="text-lg font-bold text-slate-900">
+                            ¿Deseas registrar un Reclamo o Queja?
+                        </h3>
+                        <p class="mt-1 text-xs text-slate-500 max-w-xl mx-auto">
+                            El proceso es directo, no requiere cuenta y recibirás una constancia formal con número único de seguimiento.
+                        </p>
+                        <div class="mt-5">
+                            <button
+                                type="button"
+                                @click="iniciarRegistro"
+                                class="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white shadow-md hover:opacity-95 transition cursor-pointer"
+                                :style="{ backgroundColor: empresa.color_primario }"
+                            >
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                <span>Iniciar Registro de Reclamación</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulario Interactivo de Registro -->
+                <div v-else class="space-y-6">
+                    <!-- Indicador de avance y pasos del formulario -->
+                    <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-xs">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    @click="mostrarFormulario = false"
+                                    class="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                                >
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                    </svg>
+                                    Volver
+                                </button>
+                                <span class="h-4 w-px bg-slate-200"></span>
+                                <h3 class="text-sm font-bold text-slate-900">
+                                    Paso {{ pasoActual }} de 2: {{ pasoActual === 1 ? 'Datos del Consumidor Reclamante' : 'Identificación del Bien o Servicio' }}
+                                </h3>
+                            </div>
+
+                            <div class="flex items-center gap-2 text-xs font-bold">
+                                <span
+                                    class="flex h-6 w-6 items-center justify-center rounded-full transition"
+                                    :class="pasoActual === 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'"
+                                >
+                                    1
+                                </span>
+                                <span class="hidden sm:inline text-slate-400">→</span>
+                                <span
+                                    class="flex h-6 w-6 items-center justify-center rounded-full transition"
+                                    :class="pasoActual === 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'"
+                                >
+                                    2
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Paso 1: Identificación y Datos del Consumidor Reclamante -->
+                    <div v-show="pasoActual === 1" class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs space-y-6">
+                        <div class="border-b border-slate-100 pb-4">
+                            <h3 class="text-lg font-bold text-slate-900">
+                                1. Identificación del Consumidor Reclamante
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-1">
+                                Ingresa la información solicitada conforme al formato oficial del Libro de Reclamaciones.
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                            <!-- Selector del Tipo de Documento de Identidad -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Tipo de Documento *
+                                </label>
+                                <select
+                                    v-model="form.tipo_documento"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                    <option v-for="tipo in tipos_documento" :key="tipo.value" :value="tipo.value">
+                                        {{ tipo.label }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Campo para Número de Documento con máscara y longitud dinámica -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Número de Documento *
+                                </label>
+                                <input
+                                    v-model="form.numero_documento"
+                                    type="text"
+                                    :maxlength="longitudMaximaDoc"
+                                    :placeholder="placeholderDoc"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-mono text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    :class="{ 'border-rose-400 focus:border-rose-500 focus:ring-rose-500': form.errors.numero_documento }"
+                                />
+                                <p v-if="form.errors.numero_documento" class="mt-1 text-xs text-rose-600">
+                                    {{ form.errors.numero_documento }}
+                                </p>
+                            </div>
+
+                            <!-- Nombres o Razón Social según corresponda -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    {{ form.tipo_documento === 'ruc' ? 'Razón Social o Nombre Comercial *' : 'Nombres Completos *' }}
+                                </label>
+                                <input
+                                    v-model="form.nombres"
+                                    type="text"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    :class="{ 'border-rose-400 focus:border-rose-500 focus:ring-rose-500': form.errors.nombres }"
+                                />
+                                <p v-if="form.errors.nombres" class="mt-1 text-xs text-rose-600">
+                                    {{ form.errors.nombres }}
+                                </p>
+                            </div>
+
+                            <!-- Apellidos para personas naturales -->
+                            <div v-if="form.tipo_documento !== 'ruc'">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Apellidos Completos *
+                                </label>
+                                <input
+                                    v-model="form.apellidos"
+                                    type="text"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    :class="{ 'border-rose-400 focus:border-rose-500 focus:ring-rose-500': form.errors.apellidos }"
+                                />
+                                <p v-if="form.errors.apellidos" class="mt-1 text-xs text-rose-600">
+                                    {{ form.errors.apellidos }}
+                                </p>
+                            </div>
+
+                            <!-- Correo Electrónico del Consumidor -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Correo Electrónico *
+                                </label>
+                                <input
+                                    v-model="form.email"
+                                    type="email"
+                                    placeholder="correo@ejemplo.com"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    :class="{ 'border-rose-400 focus:border-rose-500 focus:ring-rose-500': form.errors.email }"
+                                />
+                                <p class="mt-1 text-xs text-slate-400">
+                                    A esta dirección te enviaremos la copia digital de tu reclamación.
+                                </p>
+                                <p v-if="form.errors.email" class="mt-1 text-xs text-rose-600">
+                                    {{ form.errors.email }}
+                                </p>
+                            </div>
+
+                            <!-- Teléfono o Celular de Contacto -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Teléfono / Celular de Contacto *
+                                </label>
+                                <input
+                                    v-model="form.telefono"
+                                    type="text"
+                                    placeholder="ej. 987654321"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    :class="{ 'border-rose-400 focus:border-rose-500 focus:ring-rose-500': form.errors.telefono }"
+                                />
+                                <p v-if="form.errors.telefono" class="mt-1 text-xs text-rose-600">
+                                    {{ form.errors.telefono }}
+                                </p>
+                            </div>
+
+                            <!-- Domicilio o Dirección del Consumidor -->
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Domicilio / Dirección Completa *
+                                </label>
+                                <input
+                                    v-model="form.direccion"
+                                    type="text"
+                                    placeholder="Av., Calle, N°, Urbanización o referencia"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    :class="{ 'border-rose-400 focus:border-rose-500 focus:ring-rose-500': form.errors.direccion }"
+                                />
+                                <p v-if="form.errors.direccion" class="mt-1 text-xs text-rose-600">
+                                    {{ form.errors.direccion }}
+                                </p>
+                            </div>
+
+                            <!-- Ubicación Geográfica: Departamento, Provincia y Distrito -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Departamento
+                                </label>
+                                <input
+                                    v-model="form.departamento"
+                                    type="text"
+                                    placeholder="ej. Lima"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Provincia / Distrito
+                                </label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input
+                                        v-model="form.provincia"
+                                        type="text"
+                                        placeholder="Provincia"
+                                        class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                    <input
+                                        v-model="form.distrito"
+                                        type="text"
+                                        placeholder="Distrito"
+                                        class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bloque Condicional para Consumidor Menor de Edad -->
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-4">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    v-model="form.es_menor_edad"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                />
+                                <span class="text-sm font-bold text-slate-800">
+                                    El consumidor que presenta el reclamo es menor de edad
+                                </span>
+                            </label>
+
+                            <!-- Datos del Padre, Madre o Representante Legal -->
+                            <div v-if="form.es_menor_edad" class="pt-3 border-t border-slate-200 space-y-4">
+                                <p class="text-xs text-slate-600 font-medium">
+                                    Conforme a la normativa de INDECOPI, el reclamo de un menor de edad debe estar respaldado por uno de sus padres o representante legal:
+                                </p>
+
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div class="sm:col-span-2">
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                                            Nombres y Apellidos del Padre, Madre o Apoderado *
+                                        </label>
+                                        <input
+                                            v-model="form.apoderado_nombre"
+                                            type="text"
+                                            class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            :class="{ 'border-rose-400': form.errors.apoderado_nombre }"
+                                        />
+                                        <p v-if="form.errors.apoderado_nombre" class="mt-1 text-xs text-rose-600">
+                                            {{ form.errors.apoderado_nombre }}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                                            Tipo Documento Apoderado *
+                                        </label>
+                                        <select
+                                            v-model="form.apoderado_tipo_documento"
+                                            class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        >
+                                            <option value="dni">DNI</option>
+                                            <option value="ce">Carné de Extranjería</option>
+                                            <option value="pasaporte">Pasaporte</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                                            N° Documento Apoderado *
+                                        </label>
+                                        <input
+                                            v-model="form.apoderado_numero_documento"
+                                            type="text"
+                                            class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-mono text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            :class="{ 'border-rose-400': form.errors.apoderado_numero_documento }"
+                                        />
+                                        <p v-if="form.errors.apoderado_numero_documento" class="mt-1 text-xs text-rose-600">
+                                            {{ form.errors.apoderado_numero_documento }}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                                            Teléfono Apoderado (Opcional)
+                                        </label>
+                                        <input
+                                            v-model="form.apoderado_telefono"
+                                            type="text"
+                                            class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                                            Correo Apoderado (Opcional)
+                                        </label>
+                                        <input
+                                            v-model="form.apoderado_email"
+                                            type="email"
+                                            class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botón de avance hacia la siguiente sección -->
+                        <div class="flex justify-end pt-4 border-t border-slate-100">
+                            <button
+                                type="button"
+                                @click="validarPasoConsumidor"
+                                class="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:opacity-95 transition cursor-pointer"
+                                :style="{ backgroundColor: empresa.color_primario }"
+                            >
+                                <span>Continuar al Paso 2</span>
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Paso 2: Identificación del Bien o Servicio Contratado -->
+                    <div v-show="pasoActual === 2" class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs space-y-6">
+                        <div class="border-b border-slate-100 pb-4">
+                            <h3 class="text-lg font-bold text-slate-900">
+                                2. Identificación del Bien o Servicio Contratado
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-1">
+                                Indica con exactitud las características del bien adquirido o servicio solicitado.
+                            </p>
+                        </div>
+
+                        <!-- Selector de Sede o Establecimiento Asociado -->
+                        <div v-if="establecimientos && establecimientos.length > 0">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                Establecimiento / Sede Relacionada
+                            </label>
+                            <select
+                                v-model="form.establecimiento_id"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option
+                                    v-for="est in establecimientos"
+                                    :key="est.id"
+                                    :value="est.id"
+                                >
+                                    {{ est.nombre }} ({{ est.codigo }}) — {{ est.direccion }}
+                                    {{ est.es_principal ? ' [Principal]' : '' }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Tarjetas de Selección: Producto o Servicio -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-2">
+                                Tipo de Bien *
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <label
+                                    class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition"
+                                    :class="form.tipo_bien === 'producto' ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:bg-slate-50'"
+                                >
+                                    <input
+                                        type="radio"
+                                        v-model="form.tipo_bien"
+                                        value="producto"
+                                        class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <div>
+                                        <div class="flex items-center gap-1.5 font-bold text-slate-900 text-sm">
+                                            <span>📦</span>
+                                            <span>Producto</span>
+                                        </div>
+                                        <p class="mt-1 text-xs text-slate-500">
+                                            Artículo físico, bien digital, software, equipo o producto adquirido.
+                                        </p>
+                                    </div>
+                                </label>
+
+                                <label
+                                    class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition"
+                                    :class="form.tipo_bien === 'servicio' ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:bg-slate-50'"
+                                >
+                                    <input
+                                        type="radio"
+                                        v-model="form.tipo_bien"
+                                        value="servicio"
+                                        class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <div>
+                                        <div class="flex items-center gap-1.5 font-bold text-slate-900 text-sm">
+                                            <span>🛠️</span>
+                                            <span>Servicio</span>
+                                        </div>
+                                        <p class="mt-1 text-xs text-slate-500">
+                                            Atención, consultoría, desarrollo, soporte técnico, mantenimiento o servicio brindado.
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+                            <p v-if="form.errors.tipo_bien" class="mt-1 text-xs text-rose-600">
+                                {{ form.errors.tipo_bien }}
+                            </p>
+                        </div>
+
+                        <!-- Detalle y descripción del producto o servicio -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                Descripción del Producto o Servicio Contratado *
+                            </label>
+                            <textarea
+                                v-model="form.descripcion_bien"
+                                rows="3"
+                                placeholder="Indica nombre del producto, modelo, plan contratado, características principales..."
+                                class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                :class="{ 'border-rose-400 focus:border-rose-500 focus:ring-rose-500': form.errors.descripcion_bien }"
+                            ></textarea>
+                            <div class="flex items-center justify-between mt-1 text-xs text-slate-400">
+                                <span>Sé lo más específico posible con el bien objeto del reclamo.</span>
+                                <span>{{ form.descripcion_bien.length }}/1500 caracteres</span>
+                            </div>
+                            <p v-if="form.errors.descripcion_bien" class="mt-1 text-xs text-rose-600">
+                                {{ form.errors.descripcion_bien }}
+                            </p>
+                        </div>
+
+                        <!-- Monto y moneda reclamados cuando proceda -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Moneda
+                                </label>
+                                <select
+                                    v-model="form.moneda"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                    <option value="PEN">Soles (S/ - PEN)</option>
+                                    <option value="USD">Dólares (US$ - USD)</option>
+                                </select>
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Monto Reclamado (Opcional, cuando proceda)
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-xs font-bold text-slate-400">
+                                        {{ form.moneda === 'PEN' ? 'S/' : '$' }}
+                                    </span>
+                                    <input
+                                        v-model="form.monto_reclamado"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        class="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3.5 py-2.5 text-sm font-mono text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        :class="{ 'border-rose-400': form.errors.monto_reclamado }"
+                                    />
+                                </div>
+                                <p v-if="form.errors.monto_reclamado" class="mt-1 text-xs text-rose-600">
+                                    {{ form.errors.monto_reclamado }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Referencias adicionales de comprobante de compra y fecha -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    N° de Comprobante / Pedido (Opcional)
+                                </label>
+                                <input
+                                    v-model="form.numero_comprobante"
+                                    type="text"
+                                    placeholder="ej. B001-000452 o Pedido #10852"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                                <p class="mt-1 text-xs text-slate-400">
+                                    Boleta, factura o código de orden de compra.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Fecha de Compra o Contratación (Opcional)
+                                </label>
+                                <input
+                                    v-model="form.fecha_contratacion"
+                                    type="date"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    :class="{ 'border-rose-400': form.errors.fecha_contratacion }"
+                                />
+                                <p v-if="form.errors.fecha_contratacion" class="mt-1 text-xs text-rose-600">
+                                    {{ form.errors.fecha_contratacion }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción: Regresar y Enviar Formulario -->
+                        <div class="flex items-center justify-between pt-6 border-t border-slate-100">
+                            <button
+                                type="button"
+                                @click="pasoActual = 1"
+                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                            >
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                <span>Paso Anterior</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                @click="enviarRegistro"
+                                :disabled="form.processing"
+                                class="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-md hover:opacity-95 transition disabled:opacity-50 cursor-pointer"
+                                :style="{ backgroundColor: empresa.color_primario }"
+                            >
+                                <span v-if="form.processing">Procesando...</span>
+                                <span v-else>Guardar y Registrar</span>
+                                <svg v-if="!form.processing" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Pie de Página Institucional del Comercio -->
+        <footer class="border-t border-slate-200 bg-white py-6 mt-12 text-center text-xs text-slate-500">
+            <div class="mx-auto max-w-5xl px-4 space-y-1">
+                <p>
+                    Plataforma provista por <strong>Datec Libro</strong> conforme al Código de Protección y Defensa del Consumidor (Ley N° 29571).
+                </p>
+                <p class="text-slate-400">
+                    {{ empresa.razon_social }} • RUC {{ empresa.ruc }} • {{ empresa.direccion }}
+                </p>
+            </div>
+        </footer>
+    </div>
+</template>
