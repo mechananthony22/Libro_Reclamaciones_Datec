@@ -1,8 +1,24 @@
 <?php
 
+use App\Console\Commands\VerificarVencimientosReclamacionesCommand;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+/*
+|--------------------------------------------------------------------------
+| Tareas Programadas del Sistema
+|--------------------------------------------------------------------------
+|
+| Verificación diaria de plazos legales de atención (15 días hábiles según Ley N° 29571)
+| ejecutada en horario laboral matutino con la zona horaria legal de Lima, Perú.
+|
+*/
+Schedule::command(VerificarVencimientosReclamacionesCommand::class)
+    ->dailyAt('08:00')
+    ->timezone('America/Lima')
+    ->withoutOverlapping();

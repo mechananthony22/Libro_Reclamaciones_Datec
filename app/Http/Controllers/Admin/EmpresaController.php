@@ -11,6 +11,7 @@ use App\Http\Requests\Admin\CambiarEstadoEmpresaRequest;
 use App\Http\Requests\Admin\StoreEmpresaRequest;
 use App\Http\Requests\Admin\UpdateEmpresaRequest;
 use App\Models\Empresa;
+use App\Services\AuditoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -98,6 +99,13 @@ class EmpresaController extends Controller
 
         $empresa = Empresa::create($datos);
 
+        app(AuditoriaService::class)->registrar(
+            'empresa_creada',
+            'empresas',
+            "Alta de nueva empresa: {$empresa->name} (RUC: {$empresa->ruc}, Plan: {$empresa->plan->value})",
+            ['empresa_id' => $empresa->id, 'datos_despues' => $datos]
+        );
+
         return redirect()
             ->route('admin.empresas.index')
             ->with('success', "Empresa {$empresa->name} registrada exitosamente.");
@@ -118,7 +126,15 @@ class EmpresaController extends Controller
         $estadoEnum = EstadoEmpresa::from($datos['estado']);
         $datos['activo'] = ($estadoEnum === EstadoEmpresa::Activa);
 
+        $estadoAnterior = $empresa->estado->value;
         $empresa->update($datos);
+
+        app(AuditoriaService::class)->registrar(
+            'empresa_actualizada',
+            'empresas',
+            "Edición de datos corporativos de la empresa: {$empresa->name}",
+            ['empresa_id' => $empresa->id, 'datos_despues' => $datos]
+        );
 
         return redirect()
             ->route('admin.empresas.index')
@@ -127,6 +143,7 @@ class EmpresaController extends Controller
 
     public function cambiarEstado(CambiarEstadoEmpresaRequest $request, Empresa $empresa): RedirectResponse
     {
+        $estadoAnterior = $empresa->estado->value;
         $nuevoEstado = EstadoEmpresa::from($request->validated('estado'));
 
         $empresa->update([
@@ -136,7 +153,17 @@ class EmpresaController extends Controller
             'activo' => ($nuevoEstado === EstadoEmpresa::Activa),
         ]);
 
+        app(AuditoriaService::class)->registrar(
+            'empresa_estado_cambiado',
+            'empresas',
+            "Cambio de estado de empresa {$empresa->name}: {$estadoAnterior} -> {$nuevoEstado->value}",
+            [
+                'empresa_id' => $empresa->id,
+                'datos_antes' => ['estado' => $estadoAnterior],
+                'datos_despues' => ['estado' => $nuevoEstado->value, 'motivo' => $request->validated('motivo')],
+            ]
+        );
+
         return back()->with('success', "Estado de la empresa actualizado a {$nuevoEstado->label()}.");
     }
 }
-

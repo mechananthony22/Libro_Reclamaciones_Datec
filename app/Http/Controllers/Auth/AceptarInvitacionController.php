@@ -97,4 +97,3 @@ class AceptarInvitacionController extends Controller
             ->with('success', "¡Bienvenido a Datec Libro! Tu cuenta para {$empresa->name} ha sido activada con éxito.");
     }
 }
-

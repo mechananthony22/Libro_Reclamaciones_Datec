@@ -148,4 +148,3 @@ test('RF-010: criterio de aceptación - API pública exige selección cuando hay
         'total' => 2,
     ]);
 });
-

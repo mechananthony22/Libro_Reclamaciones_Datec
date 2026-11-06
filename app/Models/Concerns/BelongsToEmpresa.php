@@ -55,4 +55,3 @@ trait BelongsToEmpresa
         return static::withoutGlobalScope(TenantScope::class);
     }
 }
-

@@ -6,6 +6,7 @@ use App\Enums\EstadoEmpresa;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Empresa\UpdateIdentidadLegalRequest;
 use App\Models\Empresa;
+use App\Services\AuditoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -102,11 +103,20 @@ class IdentidadLegalController extends Controller
 
         $empresa->save();
 
+        app(AuditoriaService::class)->registrar(
+            'identidad_legal_actualizada',
+            'configuracion',
+            "Edición de configuración legal de la empresa {$empresa->name} (RUC: {$empresa->ruc})",
+            [
+                'empresa_id' => $empresa->id,
+                'datos_despues' => $datos,
+            ]
+        );
+
         $mensaje = $solicitarActivacion
-            ? "¡Configuración legal guardada! El Libro de Reclamaciones ha sido activado y publicado con éxito."
+            ? '¡Configuración legal guardada! El Libro de Reclamaciones ha sido activado y publicado con éxito.'
             : "Identidad legal de {$empresa->name} actualizada correctamente.";
 
         return back()->with('success', $mensaje);
     }
 }
-

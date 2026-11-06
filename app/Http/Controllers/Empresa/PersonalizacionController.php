@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Empresa;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Empresa\UpdatePersonalizacionRequest;
 use App\Models\Empresa;
+use App\Services\AuditoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -91,6 +92,13 @@ class PersonalizacionController extends Controller
 
         $empresa->save();
 
+        app(AuditoriaService::class)->registrar(
+            'personalizacion_actualizada',
+            'configuracion',
+            "Edición de personalización visual (color: {$empresa->color_primario}) para {$empresa->name}",
+            ['empresa_id' => $empresa->id]
+        );
+
         return back()->with('success', 'Personalización visual actualizada correctamente.');
     }
 
@@ -113,4 +121,3 @@ class PersonalizacionController extends Controller
         return back()->with('success', 'Logotipo eliminado. Se mostrará el nombre comercial de la empresa.');
     }
 }
-

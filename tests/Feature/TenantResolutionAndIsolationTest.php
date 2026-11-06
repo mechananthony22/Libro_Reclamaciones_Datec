@@ -148,4 +148,3 @@ test('RF-007: modificar o forzar el empresa_id de otra empresa arroja 403 Forbid
         $itemA->save();
     })->toThrow(HttpException::class);
 });
-

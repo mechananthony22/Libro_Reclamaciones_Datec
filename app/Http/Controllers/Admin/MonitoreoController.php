@@ -139,4 +139,3 @@ class MonitoreoController extends Controller
         return back()->with('success', "Registro de error #{$id} descartado del monitoreo.");
     }
 }
-

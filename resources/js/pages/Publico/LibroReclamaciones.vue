@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 // Definición de tipos para establecimientos comerciales asociados al proveedor
 interface Establecimiento {
@@ -18,8 +18,15 @@ interface TipoDocumento {
     longitud: number | null;
 }
 
-// Opciones de tipo de bien contratado
+// Opciones de tipo de bien contratado (Producto o Servicio)
 interface TipoBienItem {
+    value: string;
+    label: string;
+    descripcion: string;
+}
+
+// Opciones de clasificación formal (Reclamo o Queja)
+interface TipoReclamacionItem {
     value: string;
     label: string;
     descripcion: string;
@@ -41,6 +48,9 @@ interface Props {
     establecimientos: Establecimiento[];
     tipos_documento: TipoDocumento[];
     tipos_bien: TipoBienItem[];
+    tipos_reclamacion?: TipoReclamacionItem[];
+    aviso_privacidad_version?: string;
+    token_seguridad?: string;
 }
 
 const props = defineProps<Props>();
@@ -87,6 +97,20 @@ const form = useForm({
     moneda: 'PEN',
     numero_comprobante: '',
     fecha_contratacion: '',
+
+    // Sección 3: Clasificación formal, detalle de hechos, pedido concreto y aviso legal
+    tipo: 'reclamo',
+    detalle_problema: '',
+    pedido_consumidor: '',
+    aviso_privacidad_leido: false,
+    aviso_privacidad_version: props.aviso_privacidad_version || '1.0',
+
+    // Archivos adjuntos y evidencias del consumidor
+    adjuntos: [] as File[],
+
+    // Protección anti-abuso y validación de autenticidad de envío
+    token_seguridad: props.token_seguridad || '',
+    sitio_web_hp: '',
 });
 
 // Captura de mensaje de confirmación flash enviado desde el servidor
@@ -115,8 +139,8 @@ const iniciarRegistro = () => {
     pasoActual.value = 1;
 };
 
-// Validación previa del lado del cliente para los datos del consumidor antes de avanzar al paso 2
-const validarPasoConsumidor = () => {
+// Validación del Paso 1: Datos del consumidor antes de avanzar
+const validarPaso1 = () => {
     form.clearErrors();
     let valido = true;
 
@@ -177,21 +201,66 @@ const validarPasoConsumidor = () => {
     }
 };
 
-// Envío seguro del formulario completo al endpoint público de registro
+// Validación del Paso 2: Bien o servicio contratado antes de avanzar
+const validarPaso2 = () => {
+    form.clearErrors();
+    let valido = true;
+
+    if (!form.descripcion_bien.trim()) {
+        form.setError('descripcion_bien', 'Describe brevemente el producto o servicio contratado.');
+        valido = false;
+    } else if (form.descripcion_bien.trim().length < 5) {
+        form.setError('descripcion_bien', 'La descripción debe tener al menos 5 caracteres.');
+        valido = false;
+    }
+
+    if (valido) {
+        pasoActual.value = 3;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+};
+
+// Validación del Paso 3 y envío seguro del formulario completo
 const enviarRegistro = () => {
-    form.post(`/l/${props.empresa.slug}/registrar`, {
-        preserveScroll: true,
-        onSuccess: () => {
-            form.reset();
-            pasoActual.value = 1;
-            mostrarFormulario.value = false;
-        },
-    });
+    form.clearErrors();
+    let valido = true;
+
+    if (!form.detalle_problema.trim()) {
+        form.setError('detalle_problema', 'Debes detallar los hechos y motivos de tu reclamación o queja.');
+        valido = false;
+    } else if (form.detalle_problema.trim().length < 10) {
+        form.setError('detalle_problema', 'El detalle de los hechos debe contener al menos 10 caracteres.');
+        valido = false;
+    }
+
+    if (!form.pedido_consumidor.trim()) {
+        form.setError('pedido_consumidor', 'Debes indicar el pedido concreto o la solución que solicitas.');
+        valido = false;
+    } else if (form.pedido_consumidor.trim().length < 5) {
+        form.setError('pedido_consumidor', 'El pedido concreto debe contener al menos 5 caracteres.');
+        valido = false;
+    }
+
+    if (!form.aviso_privacidad_leido) {
+        form.setError('aviso_privacidad_leido', 'Debes confirmar la toma de conocimiento del aviso legal de tratamiento de datos personales.');
+        valido = false;
+    }
+
+    if (valido) {
+        form.post(`/l/${props.empresa.slug}/registrar`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset();
+                pasoActual.value = 1;
+                mostrarFormulario.value = false;
+            },
+        });
+    }
 };
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 text-slate-800 antialiased flex flex-col justify-between">
+    <div class="min-h-screen bg-[#FBFDFF] text-slate-800 antialiased font-sans selection:bg-blue-100 selection:text-blue-700 flex flex-col justify-between">
         <Head :title="`Libro de Reclamaciones Virtual - ${empresa.name}`">
             <meta name="robots" content="noindex, nofollow" />
         </Head>
@@ -322,11 +391,11 @@ const enviarRegistro = () => {
                         <p class="mt-1 text-xs text-slate-500 max-w-xl mx-auto">
                             El proceso es directo, no requiere cuenta y recibirás una constancia formal con número único de seguimiento.
                         </p>
-                        <div class="mt-5">
+                        <div class="mt-5 flex flex-wrap items-center justify-center gap-3">
                             <button
                                 type="button"
                                 @click="iniciarRegistro"
-                                class="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white shadow-md hover:opacity-95 transition cursor-pointer"
+                                class="inline-flex items-center gap-2.5 rounded-full px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 hover:opacity-95 transition cursor-pointer"
                                 :style="{ backgroundColor: empresa.color_primario }"
                             >
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -334,11 +403,21 @@ const enviarRegistro = () => {
                                 </svg>
                                 <span>Iniciar Registro de Reclamación</span>
                             </button>
+
+                            <Link
+                                :href="route('libro.consulta', { slug: empresa.slug })"
+                                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-6 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition"
+                            >
+                                <svg class="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <span>Consultar Estado de Reclamación</span>
+                            </Link>
                         </div>
                     </div>
                 </div>
 
-                <!-- Formulario Interactivo de Registro -->
+                <!-- Formulario Interactivo de Registro en 3 Pasos -->
                 <div v-else class="space-y-6">
                     <!-- Indicador de avance y pasos del formulario -->
                     <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-xs">
@@ -356,7 +435,10 @@ const enviarRegistro = () => {
                                 </button>
                                 <span class="h-4 w-px bg-slate-200"></span>
                                 <h3 class="text-sm font-bold text-slate-900">
-                                    Paso {{ pasoActual }} de 2: {{ pasoActual === 1 ? 'Datos del Consumidor Reclamante' : 'Identificación del Bien o Servicio' }}
+                                    Paso {{ pasoActual }} de 3:
+                                    <span v-if="pasoActual === 1">Datos del Consumidor Reclamante</span>
+                                    <span v-else-if="pasoActual === 2">Identificación del Bien o Servicio</span>
+                                    <span v-else>Detalle de los Hechos y Pedido</span>
                                 </h3>
                             </div>
 
@@ -367,15 +449,40 @@ const enviarRegistro = () => {
                                 >
                                     1
                                 </span>
-                                <span class="hidden sm:inline text-slate-400">→</span>
+                                <span class="text-slate-400">→</span>
                                 <span
                                     class="flex h-6 w-6 items-center justify-center rounded-full transition"
                                     :class="pasoActual === 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'"
                                 >
                                     2
                                 </span>
+                                <span class="text-slate-400">→</span>
+                                <span
+                                    class="flex h-6 w-6 items-center justify-center rounded-full transition"
+                                    :class="pasoActual === 3 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'"
+                                >
+                                    3
+                                </span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Alerta de validación o seguridad si ocurre un error de control de abuso -->
+                    <div v-if="form.errors.sitio_web_hp || form.errors.token_seguridad" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-700">
+                        {{ form.errors.sitio_web_hp || form.errors.token_seguridad }}
+                    </div>
+
+                    <!-- Campo trampa accesible no visible para humanos destinado a la mitigación no intrusiva de bots -->
+                    <div aria-hidden="true" class="opacity-0 absolute pointer-events-none -left-[9999px] h-0 w-0 overflow-hidden" tabindex="-1">
+                        <label for="sitio_web_hp">Dejar este campo vacío</label>
+                        <input
+                            id="sitio_web_hp"
+                            v-model="form.sitio_web_hp"
+                            type="text"
+                            name="sitio_web_hp"
+                            tabindex="-1"
+                            autocomplete="off"
+                        />
                     </div>
 
                     <!-- Paso 1: Identificación y Datos del Consumidor Reclamante -->
@@ -468,7 +575,7 @@ const enviarRegistro = () => {
                                     :class="{ 'border-rose-400 focus:border-rose-500 focus:ring-rose-500': form.errors.email }"
                                 />
                                 <p class="mt-1 text-xs text-slate-400">
-                                    A esta dirección te enviaremos la copia digital de tu reclamación.
+                                    A esta dirección te enviaremos la constancia oficial de tu reclamación.
                                 </p>
                                 <p v-if="form.errors.email" class="mt-1 text-xs text-rose-600">
                                     {{ form.errors.email }}
@@ -632,12 +739,12 @@ const enviarRegistro = () => {
                             </div>
                         </div>
 
-                        <!-- Botón de avance hacia la siguiente sección -->
+                        <!-- Botón de avance hacia el Paso 2 -->
                         <div class="flex justify-end pt-4 border-t border-slate-100">
                             <button
                                 type="button"
-                                @click="validarPasoConsumidor"
-                                class="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:opacity-95 transition cursor-pointer"
+                                @click="validarPaso1"
+                                class="inline-flex items-center gap-2 rounded-full px-7 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/20 hover:opacity-95 transition cursor-pointer"
                                 :style="{ backgroundColor: empresa.color_primario }"
                             >
                                 <span>Continuar al Paso 2</span>
@@ -825,12 +932,211 @@ const enviarRegistro = () => {
                             </div>
                         </div>
 
-                        <!-- Botones de Acción: Regresar y Enviar Formulario -->
+                        <!-- Botones de Acción: Regresar y Avanzar al Paso 3 -->
                         <div class="flex items-center justify-between pt-6 border-t border-slate-100">
                             <button
                                 type="button"
                                 @click="pasoActual = 1"
-                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                                class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-6 py-2.5 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                            >
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                <span>Paso Anterior</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                @click="validarPaso2"
+                                class="inline-flex items-center gap-2 rounded-full px-7 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/20 hover:opacity-95 transition cursor-pointer"
+                                :style="{ backgroundColor: empresa.color_primario }"
+                            >
+                                <span>Continuar al Paso 3</span>
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Paso 3: Clasificación, Detalle de Hechos, Pedido Concreto y Aviso de Privacidad -->
+                    <div v-show="pasoActual === 3" class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs space-y-6">
+                        <div class="border-b border-slate-100 pb-4">
+                            <h3 class="text-lg font-bold text-slate-900">
+                                3. Detalle de la Reclamación y Pedido Concreto
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-1">
+                                Define la naturaleza de tu disconformidad, describe los hechos con exactitud y expresa tu pedido concreto.
+                            </p>
+                        </div>
+
+                        <!-- Clasificación Formal: Reclamo vs Queja con explicación accesible -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-2">
+                                Tipo de Presentación *
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <label
+                                    class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition"
+                                    :class="form.tipo === 'reclamo' ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:bg-slate-50'"
+                                >
+                                    <input
+                                        type="radio"
+                                        v-model="form.tipo"
+                                        value="reclamo"
+                                        class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <div>
+                                        <div class="flex items-center gap-2 font-bold text-slate-900 text-sm">
+                                            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-xs text-blue-700 font-extrabold">R</span>
+                                            <span>Reclamo</span>
+                                        </div>
+                                        <p class="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                                            Disconformidad directamente relacionada con los productos o servicios adquiridos o contratados.
+                                        </p>
+                                    </div>
+                                </label>
+
+                                <label
+                                    class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition"
+                                    :class="form.tipo === 'queja' ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500' : 'border-slate-200 bg-white hover:bg-slate-50'"
+                                >
+                                    <input
+                                        type="radio"
+                                        v-model="form.tipo"
+                                        value="queja"
+                                        class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <div>
+                                        <div class="flex items-center gap-2 font-bold text-slate-900 text-sm">
+                                            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-xs text-amber-700 font-extrabold">Q</span>
+                                            <span>Queja</span>
+                                        </div>
+                                        <p class="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                                            Malestar o descontento respecto a la atención al público brindada por el personal o aspectos no relacionados directamente con el bien.
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+                            <p v-if="form.errors.tipo" class="mt-1 text-xs text-rose-600">
+                                {{ form.errors.tipo }}
+                            </p>
+                        </div>
+
+                        <!-- Campo: Detalle de los Hechos / Descripción del Problema con límites visibles -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block text-xs font-bold text-slate-700">
+                                    Detalle del Problema y Hechos Ocurridos *
+                                </label>
+                                <span class="text-xs font-mono text-slate-400">
+                                    {{ form.detalle_problema.length }} / 3000 caracteres
+                                </span>
+                            </div>
+                            <textarea
+                                v-model="form.detalle_problema"
+                                rows="4"
+                                maxlength="3000"
+                                placeholder="Describe de forma cronológica y detallada los hechos que sustentan tu reclamación o queja..."
+                                class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                :class="{ 'border-rose-400 focus:border-rose-500 focus:ring-rose-500': form.errors.detalle_problema }"
+                            ></textarea>
+                            <p v-if="form.errors.detalle_problema" class="mt-1 text-xs text-rose-600">
+                                {{ form.errors.detalle_problema }}
+                            </p>
+                        </div>
+
+                        <!-- Campo: Pedido Concreto del Consumidor con límites visibles -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block text-xs font-bold text-slate-700">
+                                    Pedido Concreto del Consumidor *
+                                </label>
+                                <span class="text-xs font-mono text-slate-400">
+                                    {{ form.pedido_consumidor.length }} / 1000 caracteres
+                                </span>
+                            </div>
+                            <textarea
+                                v-model="form.pedido_consumidor"
+                                rows="3"
+                                maxlength="1000"
+                                placeholder="Indica concretamente lo que solicitas para solucionar tu reclamación (ej. devolución de dinero, cambio de producto, anulación de cobro, etc.)..."
+                                class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                :class="{ 'border-rose-400 focus:border-rose-500 focus:ring-rose-500': form.errors.pedido_consumidor }"
+                            ></textarea>
+                            <p v-if="form.errors.pedido_consumidor" class="mt-1 text-xs text-rose-600">
+                                {{ form.errors.pedido_consumidor }}
+                            </p>
+                        </div>
+
+                        <!-- Anexión Opcional de Evidencias y Documentos de Sustento -->
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs font-bold text-slate-700">
+                                    Documentos o Evidencias de Sustento (Opcional)
+                                </label>
+                                <span class="text-[11px] text-slate-400 font-medium">Máx. 3 archivos de 5MB c/u</span>
+                            </div>
+                            <input
+                                type="file"
+                                multiple
+                                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                                @change="(e: any) => form.adjuntos = Array.from(e.target.files || [])"
+                                class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer"
+                            />
+                            <p class="text-[11px] text-slate-400">
+                                Formatos admitidos: PDF, JPG, PNG o WEBP. Puedes adjuntar fotos del producto, contratos, recibos o capturas.
+                            </p>
+                            <p v-if="form.errors.adjuntos" class="mt-1 text-xs text-rose-600">
+                                {{ form.errors.adjuntos }}
+                            </p>
+                        </div>
+
+                        <!-- Marco Legal y Aviso de Privacidad y Tratamiento de Datos (Ley N° 29733) -->
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 space-y-3">
+                            <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                                <div class="flex items-center gap-2">
+                                    <svg class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">
+                                        Aviso de Privacidad y Protección de Datos Personales
+                                    </h4>
+                                </div>
+                                <span class="text-[11px] font-mono text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                                    Versión {{ form.aviso_privacidad_version }}
+                                </span>
+                            </div>
+
+                            <p class="text-xs text-slate-600 leading-relaxed">
+                                En cumplimiento de la <strong>Ley N° 29733 (Ley de Protección de Datos Personales)</strong> y su reglamento, se informa que <strong>{{ empresa.razon_social }}</strong> actúa como <em>Responsable del Tratamiento</em> de los datos recopilados, con la finalidad exclusiva de dar curso, investigar y resolver su reclamación en el marco legal del Código de Protección y Defensa del Consumidor. Asimismo, <strong>Datec</strong> actúa como <em>Encargado Tecnológico</em> de la plataforma y almacenamiento seguro. Sus datos no serán empleados con fines comerciales ni transferidos a terceros no autorizados.
+                            </p>
+
+                            <!-- Checkbox de toma de conocimiento del aviso legal -->
+                            <div class="pt-2">
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        v-model="form.aviso_privacidad_leido"
+                                        type="checkbox"
+                                        class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                        :class="{ 'border-rose-400': form.errors.aviso_privacidad_leido }"
+                                    />
+                                    <span class="text-xs font-semibold text-slate-800 leading-snug">
+                                        He leído y tomo conocimiento del tratamiento de mis datos personales para la atención y seguimiento formal de esta reclamación legal. *
+                                    </span>
+                                </label>
+                                <p v-if="form.errors.aviso_privacidad_leido" class="mt-1 text-xs text-rose-600">
+                                    {{ form.errors.aviso_privacidad_leido }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción: Regresar y Registrar Reclamación Oficial -->
+                        <div class="flex items-center justify-between pt-6 border-t border-slate-100">
+                            <button
+                                type="button"
+                                @click="pasoActual = 2"
+                                class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-6 py-2.5 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                             >
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -842,11 +1148,11 @@ const enviarRegistro = () => {
                                 type="button"
                                 @click="enviarRegistro"
                                 :disabled="form.processing"
-                                class="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-md hover:opacity-95 transition disabled:opacity-50 cursor-pointer"
+                                class="inline-flex items-center gap-2 rounded-full px-8 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/25 hover:opacity-95 transition disabled:opacity-50 cursor-pointer"
                                 :style="{ backgroundColor: empresa.color_primario }"
                             >
-                                <span v-if="form.processing">Procesando...</span>
-                                <span v-else>Guardar y Registrar</span>
+                                <span v-if="form.processing">Procesando envío...</span>
+                                <span v-else>Presentar Reclamación / Queja</span>
                                 <svg v-if="!form.processing" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>

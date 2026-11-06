@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,14 +41,14 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
-                'empresa_actual' => fn () => \App\Models\Empresa::current() ? [
-                    'id' => \App\Models\Empresa::current()->id,
-                    'name' => \App\Models\Empresa::current()->name,
-                    'slug' => \App\Models\Empresa::current()->slug,
-                    'color_primario' => \App\Models\Empresa::current()->color_primario,
+                'empresa_actual' => fn () => Empresa::current() ? [
+                    'id' => Empresa::current()->id,
+                    'name' => Empresa::current()->name,
+                    'slug' => Empresa::current()->slug,
+                    'color_primario' => Empresa::current()->color_primario,
                 ] : null,
                 'empresas_usuario' => fn () => $request->user() ? ($request->user()->isSuperAdmin()
-                    ? \App\Models\Empresa::select('id', 'name', 'slug')->get()
+                    ? Empresa::select('id', 'name', 'slug')->get()
                     : $request->user()->empresas()->wherePivot('activo', true)->select('tenants.id', 'tenants.name', 'tenants.slug')->get()
                 ) : [],
             ],

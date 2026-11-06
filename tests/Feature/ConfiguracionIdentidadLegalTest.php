@@ -85,4 +85,3 @@ test('RF-008: con mínimos legales completos permite guardar y activar el Libro 
     expect($empresa->fresh()->isActiva())->toBeTrue()
         ->and($empresa->fresh()->estado)->toBe(EstadoEmpresa::Activa);
 });
-

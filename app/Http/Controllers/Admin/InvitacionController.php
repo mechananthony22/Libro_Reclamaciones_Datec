@@ -51,4 +51,3 @@ class InvitacionController extends Controller
             ->with('invitacion_url', $enlace);
     }
 }
-

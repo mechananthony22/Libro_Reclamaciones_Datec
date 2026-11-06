@@ -4,10 +4,12 @@ namespace App\Models;
 
 use App\Enums\EstadoReclamacion;
 use App\Enums\TipoBien;
+use App\Enums\TipoReclamacion;
 use App\Models\Concerns\BelongsToEmpresa;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Modelo representativo de una reclamación o queja virtual presentada por un consumidor.
@@ -15,8 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Reclamacion extends Model
 {
-    use HasFactory;
     use BelongsToEmpresa;
+    use HasFactory;
 
     protected $table = 'reclamaciones';
 
@@ -39,7 +41,12 @@ class Reclamacion extends Model
         'pedido_consumidor',
         'datos_consumidor',
         'datos_legales_snapshot',
+        'aviso_privacidad_version',
+        'aviso_privacidad_aceptado_en',
+        'aviso_privacidad_ip',
         'estado',
+        'asignado_a',
+        'asignado_en',
         'vence_en',
         'token_consulta',
     ];
@@ -52,13 +59,27 @@ class Reclamacion extends Model
         return [
             'fecha_hora' => 'datetime',
             'fecha_contratacion' => 'date',
+            'asignado_en' => 'datetime',
             'vence_en' => 'date',
+            'aviso_privacidad_aceptado_en' => 'datetime',
+            'tipo' => TipoReclamacion::class,
             'tipo_bien' => TipoBien::class,
             'estado' => EstadoReclamacion::class,
             'monto_reclamado' => 'decimal:2',
             'datos_consumidor' => 'array',
             'datos_legales_snapshot' => 'array',
         ];
+    }
+
+    /**
+     * Reglas del modelo para salvaguardar la integridad de los expedientes.
+     * Bloquea terminantemente la eliminación destructiva ordinaria para cumplir con el marco de custodia legal.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (Reclamacion $reclamacion) {
+            throw new \DomainException('La eliminación de reclamaciones está estrictamente prohibida por normativa legal (D.S. N° 011-2011-PCM / Ley N° 29571). Los expedientes deben conservarse de forma íntegra e inmutable.');
+        });
     }
 
     /**
@@ -75,5 +96,53 @@ class Reclamacion extends Model
     public function establecimiento(): BelongsTo
     {
         return $this->belongsTo(Establecimiento::class, 'establecimiento_id');
+    }
+
+    /**
+     * Usuario de la empresa asignado como responsable del expediente.
+     */
+    public function responsable(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'asignado_a');
+    }
+
+    /**
+     * Historial cronológico inmutable de eventos y auditoría del expediente.
+     */
+    public function eventos(): HasMany
+    {
+        return $this->hasMany(ReclamacionEvento::class, 'reclamacion_id')->orderBy('created_at', 'asc');
+    }
+
+    /**
+     * Evidencias y documentos adjuntos al expediente.
+     */
+    public function adjuntos(): HasMany
+    {
+        return $this->hasMany(ReclamacionAdjunto::class, 'reclamacion_id');
+    }
+
+    /**
+     * Historial de notificaciones y correos transaccionales generados para el expediente.
+     */
+    public function envios(): HasMany
+    {
+        return $this->hasMany(ReclamacionEnvio::class, 'reclamacion_id');
+    }
+
+    /**
+     * Respuestas formales emitidas para la atención del expediente.
+     */
+    public function respuestas(): HasMany
+    {
+        return $this->hasMany(ReclamacionRespuesta::class, 'reclamacion_id')->orderBy('version', 'desc');
+    }
+
+    /**
+     * Última respuesta formal emitida.
+     */
+    public function respuestaActual(): ?ReclamacionRespuesta
+    {
+        return $this->respuestas()->first();
     }
 }

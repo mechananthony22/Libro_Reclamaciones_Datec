@@ -21,4 +21,3 @@ class SlugTenantFinder extends TenantFinder
         return null;
     }
 }
-

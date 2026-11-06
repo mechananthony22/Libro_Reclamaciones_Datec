@@ -74,7 +74,7 @@ function limpiarFiltros() {
     aplicarFiltros();
 }
 
-// Modal Cambiar Estado (RF-002)
+// Modal para actualización de estado operativo de la empresa
 const showModalEstado = ref(false);
 const empresaSeleccionadaEstado = ref<EmpresaItem | null>(null);
 const formEstado = useForm({
@@ -100,7 +100,7 @@ function submitCambiarEstado() {
     });
 }
 
-// Modal Invitar Administrador (RF-004)
+// Modal para generar enlace de invitación de administrador inicial
 const showModalInvitacion = ref(false);
 const empresaSeleccionadaInvitacion = ref<EmpresaItem | null>(null);
 const formInvitacion = useForm({
@@ -130,7 +130,7 @@ function submitInvitar() {
     });
 }
 
-// Reenviar invitación existente
+// Reenviar invitación existente a una empresa
 function reenviarInvitacion(empresaId: number, invitacionId: number) {
     router.post(`/admin/empresas/${empresaId}/invitaciones/${invitacionId}/reenviar`, {}, {
         preserveScroll: true,
@@ -148,16 +148,17 @@ function copiarEnlace(enlace: string) {
     }, 3000);
 }
 
+// Clases de estilo para distintivos de estado operativo
 function getBadgeEstado(estado: string) {
     switch (estado) {
         case 'activa':
-            return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+            return 'bg-emerald-50 text-emerald-700 border-emerald-200';
         case 'suspendida':
-            return 'bg-amber-100 text-amber-800 border-amber-200';
+            return 'bg-amber-50 text-amber-700 border-amber-200';
         case 'baja_programada':
-            return 'bg-rose-100 text-rose-800 border-rose-200';
+            return 'bg-rose-50 text-rose-700 border-rose-200';
         default:
-            return 'bg-slate-100 text-slate-800 border-slate-200';
+            return 'bg-slate-50 text-slate-700 border-slate-200';
     }
 }
 </script>
@@ -166,53 +167,61 @@ function getBadgeEstado(estado: string) {
     <AdminLayout>
         <Head title="Gestión de Empresas - Datec Libro" />
 
-        <div class="space-y-6">
-            <!-- Header section -->
+        <div class="space-y-8">
+            <!-- Cabecera de Página con Estilo SaaS Moderno -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-slate-900">Empresas y Clientes</h1>
-                    <p class="text-sm text-slate-500">
-                        Administración centralizada de organizaciones, planes y cuentas de administradores iniciales.
+                    <div class="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50/70 px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-700 mb-2">
+                        <span class="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
+                        <span>Plataforma SaaS Multitenant</span>
+                    </div>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">
+                        Empresas y Clientes
+                    </h1>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Administración centralizada de organizaciones, suscripciones y credenciales de acceso inicial.
                     </p>
                 </div>
+
                 <div>
                     <Link
                         href="/admin/empresas/create"
-                        class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-700 transition"
+                        class="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-md shadow-blue-500/25 hover:bg-blue-700 transition"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                         </svg>
-                        Nueva Empresa
+                        <span>Nueva Empresa</span>
                     </Link>
                 </div>
             </div>
 
-            <!-- Banner con enlace de invitación recién generado (RF-004) -->
+            <!-- Banner Informativo de Enlace de Activación Recién Generado -->
             <div
                 v-if="flashInvitacionUrl"
-                class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-xs"
+                class="rounded-2xl border border-blue-200 bg-blue-50/80 p-5 shadow-xs"
             >
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <div class="flex items-center gap-2 font-semibold text-blue-900 text-sm">
+                        <div class="flex items-center gap-2 font-bold text-blue-950 text-sm">
                             <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
                             Enlace de activación de administrador generado
                         </div>
-                        <p class="text-xs text-blue-700 mt-0.5">
-                            Comparte este enlace de un solo uso con el administrador de la empresa para que configure su contraseña:
+                        <p class="text-xs text-blue-800 mt-0.5">
+                            Comparte este enlace seguro con el administrador de la empresa para que configure su contraseña:
                         </p>
-                        <code class="mt-1.5 block max-w-full overflow-x-auto rounded bg-white px-2 py-1 text-xs text-blue-950 border border-blue-200 font-mono">
+                        <code class="mt-2 block max-w-full overflow-x-auto rounded-xl bg-white px-3 py-1.5 text-xs text-blue-950 border border-blue-200 font-mono shadow-2xs">
                             {{ flashInvitacionUrl }}
                         </code>
                     </div>
+
                     <div class="shrink-0 pt-2 sm:pt-0">
                         <button
                             type="button"
                             @click="copiarEnlace(flashInvitacionUrl)"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-medium text-white hover:bg-blue-700"
+                            class="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition cursor-pointer"
                         >
                             <svg v-if="!copiadoExitoso" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -220,49 +229,72 @@ function getBadgeEstado(estado: string) {
                             <svg v-else class="h-4 w-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                             </svg>
-                            {{ copiadoExitoso ? '¡Copiado!' : 'Copiar enlace' }}
+                            <span>{{ copiadoExitoso ? '¡Copiado!' : 'Copiar enlace' }}</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Métricas resumen -->
+            <!-- Métricas Resumen en Tarjetas Tipo SmartWing -->
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                    <p class="text-xs font-medium text-slate-500">Total Empresas</p>
-                    <p class="mt-1 text-2xl font-bold text-slate-900">{{ metricas.total }}</p>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Empresas</span>
+                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 text-xs font-bold">🏢</span>
+                    </div>
+                    <p class="mt-2 text-3xl font-extrabold text-slate-900">{{ metricas.total }}</p>
+                    <span class="text-[11px] text-slate-400 mt-1 block">Organizaciones registradas</span>
                 </div>
-                <div class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 shadow-xs">
-                    <p class="text-xs font-medium text-emerald-700">Activas</p>
-                    <p class="mt-1 text-2xl font-bold text-emerald-800">{{ metricas.activas }}</p>
+
+                <div class="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5 shadow-xs hover:shadow-md transition">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Activas</span>
+                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold">✓</span>
+                    </div>
+                    <p class="mt-2 text-3xl font-extrabold text-emerald-900">{{ metricas.activas }}</p>
+                    <span class="text-[11px] text-emerald-700/80 mt-1 block">Libros en producción</span>
                 </div>
-                <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-4 shadow-xs">
-                    <p class="text-xs font-medium text-amber-700">Suspendidas (RF-002)</p>
-                    <p class="mt-1 text-2xl font-bold text-amber-800">{{ metricas.suspendidas }}</p>
+
+                <div class="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 shadow-xs hover:shadow-md transition">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-amber-800 uppercase tracking-wider">Suspendidas</span>
+                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-700 text-xs font-bold">⏸</span>
+                    </div>
+                    <p class="mt-2 text-3xl font-extrabold text-amber-900">{{ metricas.suspendidas }}</p>
+                    <span class="text-[11px] text-amber-700/80 mt-1 block">Servicio en pausa</span>
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-xs">
-                    <p class="text-xs font-medium text-slate-600">Borrador</p>
-                    <p class="mt-1 text-2xl font-bold text-slate-700">{{ metricas.borrador }}</p>
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 shadow-xs hover:shadow-md transition">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">En Configuración</span>
+                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-200 text-slate-700 text-xs font-bold">✎</span>
+                    </div>
+                    <p class="mt-2 text-3xl font-extrabold text-slate-800">{{ metricas.borrador }}</p>
+                    <span class="text-[11px] text-slate-500 mt-1 block">Mínimos legales pendientes</span>
                 </div>
             </div>
 
             <!-- Barra de Filtros y Búsqueda -->
-            <div class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
                 <div class="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                     <div class="relative flex-1">
+                        <svg class="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                         <input
                             v-model="buscar"
                             @keyup.enter="aplicarFiltros"
                             type="text"
-                            placeholder="Buscar por nombre, razón social, RUC o slug..."
-                            class="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            placeholder="Buscar por nombre, razón social, RUC o enlace..."
+                            class="w-full rounded-xl border border-slate-300 bg-slate-50/50 pl-10 pr-4 py-2 text-xs sm:text-sm text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
                         />
                     </div>
+
                     <div class="w-full sm:w-44">
                         <select
                             v-model="filtroEstado"
                             @change="aplicarFiltros"
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         >
                             <option value="">Todos los estados</option>
                             <option v-for="est in estados" :key="est.value" :value="est.value">
@@ -270,11 +302,12 @@ function getBadgeEstado(estado: string) {
                             </option>
                         </select>
                     </div>
+
                     <div class="w-full sm:w-44">
                         <select
                             v-model="filtroPlan"
                             @change="aplicarFiltros"
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         >
                             <option value="">Todos los planes</option>
                             <option v-for="pl in planes" :key="pl.value" :value="pl.value">
@@ -284,78 +317,78 @@ function getBadgeEstado(estado: string) {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 shrink-0">
                     <button
                         type="button"
                         @click="aplicarFiltros"
-                        class="rounded-lg bg-slate-900 px-3.5 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                        class="rounded-full bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition cursor-pointer"
                     >
                         Filtrar
                     </button>
                     <button
                         type="button"
                         @click="limpiarFiltros"
-                        class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                        class="rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
                     >
                         Limpiar
                     </button>
                 </div>
             </div>
 
-            <!-- Tabla de Empresas -->
-            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+            <!-- Tabla de Empresas Estilo Card Moderno -->
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm text-slate-600">
-                        <thead class="bg-slate-50 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
+                        <thead class="bg-slate-50/80 text-[11px] uppercase font-bold text-slate-500 border-b border-slate-200">
                             <tr>
-                                <th scope="col" class="px-4 py-3.5">Empresa / Razón Social</th>
-                                <th scope="col" class="px-4 py-3.5">RUC</th>
-                                <th scope="col" class="px-4 py-3.5">Enlace / Slug</th>
-                                <th scope="col" class="px-4 py-3.5">Plan (RF-003)</th>
-                                <th scope="col" class="px-4 py-3.5">Estado (RF-002)</th>
-                                <th scope="col" class="px-4 py-3.5">Administrador (RF-004)</th>
-                                <th scope="col" class="px-4 py-3.5 text-right">Acciones</th>
+                                <th scope="col" class="px-5 py-4">Empresa / Razón Social</th>
+                                <th scope="col" class="px-5 py-4">RUC</th>
+                                <th scope="col" class="px-5 py-4">Enlace Público</th>
+                                <th scope="col" class="px-5 py-4">Plan</th>
+                                <th scope="col" class="px-5 py-4">Estado</th>
+                                <th scope="col" class="px-5 py-4">Administrador</th>
+                                <th scope="col" class="px-5 py-4 text-right">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-200">
-                            <tr v-for="emp in empresas.data" :key="emp.id" class="hover:bg-slate-50/70 transition-colors">
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="emp in empresas.data" :key="emp.id" class="hover:bg-blue-50/20 transition-colors">
                                 <!-- Nombre y Razón Social -->
-                                <td class="px-4 py-3.5">
-                                    <div class="font-semibold text-slate-900">{{ emp.name }}</div>
+                                <td class="px-5 py-4">
+                                    <div class="font-bold text-slate-900">{{ emp.name }}</div>
                                     <div class="text-xs text-slate-500 truncate max-w-xs">{{ emp.razon_social }}</div>
                                 </td>
 
                                 <!-- RUC -->
-                                <td class="px-4 py-3.5 font-mono text-xs text-slate-800">
+                                <td class="px-5 py-4 font-mono text-xs font-semibold text-slate-800">
                                     {{ emp.ruc }}
                                 </td>
 
-                                <!-- Slug / URL pública -->
-                                <td class="px-4 py-3.5">
+                                <!-- Enlace / Slug -->
+                                <td class="px-5 py-4">
                                     <a
                                         :href="`/l/${emp.slug}`"
                                         target="_blank"
-                                        class="inline-flex items-center gap-1 font-mono text-xs text-blue-600 hover:underline"
+                                        class="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline"
                                     >
-                                        /l/{{ emp.slug }}
-                                        <svg class="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <span>/l/{{ emp.slug }}</span>
+                                        <svg class="h-3.5 w-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                         </svg>
                                     </a>
                                 </td>
 
                                 <!-- Plan -->
-                                <td class="px-4 py-3.5">
-                                    <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 capitalize">
+                                <td class="px-5 py-4">
+                                    <span class="inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-bold text-slate-700 capitalize">
                                         {{ emp.plan }}
                                     </span>
                                 </td>
 
-                                <!-- Estado con Badge -->
-                                <td class="px-4 py-3.5">
+                                <!-- Estado con Distintivo Píldora -->
+                                <td class="px-5 py-4">
                                     <span
                                         :class="[
-                                            'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize',
+                                            'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold capitalize',
                                             getBadgeEstado(emp.estado)
                                         ]"
                                     >
@@ -363,20 +396,20 @@ function getBadgeEstado(estado: string) {
                                     </span>
                                 </td>
 
-                                <!-- Admin / Invitación -->
-                                <td class="px-4 py-3.5">
-                                    <div v-if="emp.usuarios_count > 0" class="flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
+                                <!-- Administrador e Invitaciones -->
+                                <td class="px-5 py-4">
+                                    <div v-if="emp.usuarios_count > 0" class="flex items-center gap-1.5 text-xs text-emerald-700 font-bold">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                                         </svg>
-                                        {{ emp.usuarios_count }} cuenta(s) activa(s)
+                                        {{ emp.usuarios_count }} activo(s)
                                     </div>
                                     <div v-else-if="emp.invitaciones && emp.invitaciones.length > 0" class="text-xs">
-                                        <div class="text-amber-700 font-medium">Invitación pendiente</div>
+                                        <span class="text-amber-700 font-bold block">Invitación pendiente</span>
                                         <button
                                             type="button"
                                             @click="reenviarInvitacion(emp.id, emp.invitaciones[0].id)"
-                                            class="text-blue-600 hover:underline text-[11px]"
+                                            class="text-blue-600 hover:underline text-[11px] font-semibold mt-0.5 cursor-pointer"
                                         >
                                             Reenviar enlace
                                         </button>
@@ -385,7 +418,7 @@ function getBadgeEstado(estado: string) {
                                         <button
                                             type="button"
                                             @click="abrirModalInvitacion(emp)"
-                                            class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800"
+                                            class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
                                         >
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -396,34 +429,33 @@ function getBadgeEstado(estado: string) {
                                 </td>
 
                                 <!-- Acciones -->
-                                <td class="px-4 py-3.5 text-right whitespace-nowrap space-x-2">
+                                <td class="px-5 py-4 text-right whitespace-nowrap space-x-1.5">
                                     <button
                                         type="button"
                                         @click="abrirModalEstado(emp)"
-                                        title="Cambiar estado de servicio (RF-002)"
-                                        class="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                        class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                                     >
                                         Estado
                                     </button>
                                     <button
                                         type="button"
                                         @click="abrirModalInvitacion(emp)"
-                                        title="Invitar usuario (RF-004)"
-                                        class="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                        class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                                     >
                                         Invitar
                                     </button>
                                     <Link
                                         :href="`/admin/empresas/${emp.id}/edit`"
-                                        class="rounded-md bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-200"
+                                        class="rounded-full bg-blue-50 border border-blue-100 px-3.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition"
                                     >
                                         Editar
                                     </Link>
                                 </td>
                             </tr>
+
                             <tr v-if="empresas.data.length === 0">
-                                <td colspan="7" class="px-4 py-8 text-center text-slate-500">
-                                    No se encontraron empresas registradas con los filtros actuales.
+                                <td colspan="7" class="px-5 py-10 text-center text-slate-500">
+                                    No se encontraron empresas registradas con los filtros seleccionados.
                                 </td>
                             </tr>
                         </tbody>
@@ -433,10 +465,10 @@ function getBadgeEstado(estado: string) {
                 <!-- Paginación -->
                 <div
                     v-if="empresas.last_page > 1"
-                    class="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3 sm:px-6"
+                    class="flex items-center justify-between border-t border-slate-200 bg-slate-50/70 px-5 py-3 sm:px-6"
                 >
-                    <div class="text-xs text-slate-500">
-                        Mostrando página {{ empresas.current_page }} de {{ empresas.last_page }} ({{ empresas.total }} empresas)
+                    <div class="text-xs font-medium text-slate-500">
+                        Página {{ empresas.current_page }} de {{ empresas.last_page }} ({{ empresas.total }} empresas registradas)
                     </div>
                     <div class="flex gap-1">
                         <Link
@@ -444,7 +476,7 @@ function getBadgeEstado(estado: string) {
                             :key="i"
                             :href="link.url || '#'"
                             :class="[
-                                'rounded px-2.5 py-1 text-xs font-medium',
+                                'rounded-full px-3 py-1 text-xs font-bold transition',
                                 link.active ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100',
                                 !link.url && 'opacity-50 cursor-not-allowed'
                             ]"
@@ -455,9 +487,9 @@ function getBadgeEstado(estado: string) {
             </div>
         </div>
 
-        <!-- MODAL CAMBIAR ESTADO (RF-002) -->
-        <div v-if="showModalEstado" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+        <!-- Modal para Modificar Estado Operativo -->
+        <div v-if="showModalEstado" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
                 <h3 class="text-lg font-bold text-slate-900">
                     Cambiar estado de servicio
                 </h3>
@@ -467,10 +499,10 @@ function getBadgeEstado(estado: string) {
 
                 <form @submit.prevent="submitCambiarEstado" class="mt-4 space-y-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700">Nuevo Estado</label>
+                        <label class="block text-xs font-bold text-slate-700">Nuevo Estado Operativo</label>
                         <select
                             v-model="formEstado.estado"
-                            class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-hidden"
+                            class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none"
                         >
                             <option v-for="est in estados" :key="est.value" :value="est.value">
                                 {{ est.label }}
@@ -482,14 +514,14 @@ function getBadgeEstado(estado: string) {
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700">
-                            Motivo del cambio (Obligatorio para auditoría RF-002)
+                        <label class="block text-xs font-bold text-slate-700">
+                            Motivo del cambio de estado
                         </label>
                         <textarea
                             v-model="formEstado.motivo"
                             rows="3"
-                            placeholder="Ej. Activación tras confirmación de suscripción, o suspensión por mora..."
-                            class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-hidden"
+                            placeholder="Indica la justificación administrativa para el registro de auditoría..."
+                            class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
                             required
                         ></textarea>
                         <div v-if="formEstado.errors.motivo" class="text-xs text-rose-600 mt-1">
@@ -497,18 +529,18 @@ function getBadgeEstado(estado: string) {
                         </div>
                     </div>
 
-                    <div class="flex justify-end gap-2 pt-2">
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
                         <button
                             type="button"
                             @click="showModalEstado = false"
-                            class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                            class="rounded-full border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             :disabled="formEstado.processing"
-                            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                            class="rounded-full bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition disabled:opacity-50 cursor-pointer"
                         >
                             {{ formEstado.processing ? 'Guardando...' : 'Guardar Cambio' }}
                         </button>
@@ -517,9 +549,9 @@ function getBadgeEstado(estado: string) {
             </div>
         </div>
 
-        <!-- MODAL INVITAR ADMINISTRADOR (RF-004) -->
-        <div v-if="showModalInvitacion" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+        <!-- Modal para Generar Enlace de Invitación -->
+        <div v-if="showModalInvitacion" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
                 <h3 class="text-lg font-bold text-slate-900">
                     Invitar Administrador de Empresa
                 </h3>
@@ -529,13 +561,13 @@ function getBadgeEstado(estado: string) {
 
                 <form @submit.prevent="submitInvitar" class="mt-4 space-y-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700">Correo Electrónico</label>
+                        <label class="block text-xs font-bold text-slate-700">Correo Electrónico *</label>
                         <input
                             v-model="formInvitacion.email"
                             type="email"
                             required
                             placeholder="admin@empresa.com"
-                            class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-hidden"
+                            class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
                         />
                         <div v-if="formInvitacion.errors.email" class="text-xs text-rose-600 mt-1">
                             {{ formInvitacion.errors.email }}
@@ -543,20 +575,20 @@ function getBadgeEstado(estado: string) {
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700">Nombre del Administrador (Opcional)</label>
+                        <label class="block text-xs font-bold text-slate-700">Nombre del Administrador (Opcional)</label>
                         <input
                             v-model="formInvitacion.nombre"
                             type="text"
                             placeholder="Juan Pérez"
-                            class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-hidden"
+                            class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
                         />
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700">Rol Asignado</label>
+                        <label class="block text-xs font-bold text-slate-700">Rol Asignado</label>
                         <select
                             v-model="formInvitacion.rol"
-                            class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-hidden"
+                            class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none"
                         >
                             <option v-for="r in roles" :key="r.value" :value="r.value">
                                 {{ r.label }}
@@ -565,10 +597,10 @@ function getBadgeEstado(estado: string) {
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700">Vigencia del enlace</label>
+                        <label class="block text-xs font-bold text-slate-700">Vigencia del enlace</label>
                         <select
                             v-model="formInvitacion.horas_expiracion"
-                            class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-hidden"
+                            class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none"
                         >
                             <option :value="24">24 horas (1 día)</option>
                             <option :value="72">72 horas (3 días - Recomendado)</option>
@@ -576,18 +608,18 @@ function getBadgeEstado(estado: string) {
                         </select>
                     </div>
 
-                    <div class="flex justify-end gap-2 pt-2">
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
                         <button
                             type="button"
                             @click="showModalInvitacion = false"
-                            class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                            class="rounded-full border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             :disabled="formInvitacion.processing"
-                            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                            class="rounded-full bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition disabled:opacity-50 cursor-pointer"
                         >
                             {{ formInvitacion.processing ? 'Generando...' : 'Generar Invitación' }}
                         </button>
@@ -597,4 +629,3 @@ function getBadgeEstado(estado: string) {
         </div>
     </AdminLayout>
 </template>
-

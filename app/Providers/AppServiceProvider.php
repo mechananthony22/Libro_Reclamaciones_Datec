@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -23,7 +26,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->loadMigrationsFrom(database_path('migrations/landlord'));
         $this->configureDefaults();
+        $this->configureRateLimiting();
     }
 
     /**
@@ -46,5 +51,18 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /**
+     * Configuración de límites de tasa (rate limiting) para prevenir abuso y ataques de denegación de servicio.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('registro-reclamacion', function (Request $request) {
+            $slug = (string) $request->route('slug', '');
+            $ip = (string) $request->ip();
+
+            return Limit::perMinute(5)->by($ip.'|'.$slug);
+        });
     }
 }

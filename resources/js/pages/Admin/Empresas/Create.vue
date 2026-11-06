@@ -42,21 +42,21 @@ function submit() {
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight text-slate-900">Registrar Nueva Empresa</h1>
                     <p class="text-sm text-slate-500">
-                        Crea una organización cliente con sus datos legales, plan y configuración inicial (RF-001).
+                        Crea una organización cliente con sus datos legales, plan y configuración inicial.
                     </p>
                 </div>
                 <Link
                     href="/admin/empresas"
-                    class="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    class="rounded-full border border-slate-300 bg-white px-5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition"
                 >
                     Volver al listado
                 </Link>
             </div>
 
             <form @submit.prevent="submit" class="space-y-6">
-                <!-- SECCIÓN 1: IDENTIFICACIÓN LEGAL (RF-001) -->
-                <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-                    <h2 class="text-base font-semibold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
+                <!-- Identificación legal y comercial -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
                         <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">1</span>
                         Identificación Legal y Comercial
                     </h2>
@@ -150,67 +150,67 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- SECCIÓN 2: REPRESENTANTE OPERATIVO (RF-001) -->
-                <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-                    <h2 class="text-base font-semibold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
+                <!-- Representante operativo -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
                         <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">2</span>
                         Representante Operativo de la Empresa
                     </h2>
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Nombre del Representante</label>
+                            <label class="block text-xs font-bold text-slate-700">Nombre del Representante</label>
                             <input
                                 v-model="form.representante_nombre"
                                 type="text"
                                 placeholder="Carlos Mendoza"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-none"
                             />
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Correo del Representante</label>
+                            <label class="block text-xs font-bold text-slate-700">Correo del Representante</label>
                             <input
                                 v-model="form.representante_email"
                                 type="email"
                                 placeholder="carlos@tiendaabc.pe"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-none"
                             />
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Teléfono</label>
+                            <label class="block text-xs font-bold text-slate-700">Teléfono</label>
                             <input
                                 v-model="form.representante_telefono"
                                 type="text"
                                 placeholder="+51 912345678"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-none"
                             />
                         </div>
                     </div>
                 </div>
 
-                <!-- SECCIÓN 3: PLAN, SUSCRIPCIÓN Y ESTADO (RF-002, RF-003) -->
-                <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-                    <h2 class="text-base font-semibold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
+                <!-- Plan, suscripción y estado -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
                         <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">3</span>
                         Plan de Suscripción y Estado del Servicio
                     </h2>
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Plan Asignado (RF-003) *</label>
+                            <label class="block text-xs font-bold text-slate-700">Plan Asignado *</label>
                             <select
                                 v-model="form.plan"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-none"
                             >
                                 <option v-for="p in planes" :key="p.value" :value="p.value">{{ p.label }}</option>
                             </select>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Estado Inicial del Servicio (RF-002) *</label>
+                            <label class="block text-xs font-bold text-slate-700">Estado Inicial del Servicio *</label>
                             <select
                                 v-model="form.estado"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-none"
                             >
                                 <option v-for="e in estados" :key="e.value" :value="e.value">{{ e.label }}</option>
                             </select>
@@ -259,19 +259,19 @@ function submit() {
                     </div>
                 </div>
 
-                <div class="flex items-center justify-end gap-3">
+                <div class="flex items-center justify-end gap-3 pt-4">
                     <Link
                         href="/admin/empresas"
-                        class="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        class="rounded-full border border-slate-300 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
                     >
                         Cancelar
                     </Link>
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50"
+                        class="rounded-full bg-blue-600 px-7 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-500/25 hover:bg-blue-700 transition disabled:opacity-50 cursor-pointer"
                     >
-                        {{ form.processing ? 'Guardando...' : 'Crear Empresa' }}
+                        {{ form.processing ? 'Registrando...' : 'Crear y Registrar Empresa' }}
                     </button>
                 </div>
             </form>

@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\RolEmpresa;
-use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -69,4 +68,3 @@ class InvitacionEmpresa extends Model
         return ! $this->isExpired() && ! $this->isAccepted();
     }
 }
-

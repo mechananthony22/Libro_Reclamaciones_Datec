@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Empresa;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
+use App\Services\AuditoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class CambiarEmpresaController extends Controller
 {
     /**
-     * Permite a un usuario con acceso multempresa alternar de contexto tenant 
+     * Permite a un usuario con acceso multempresa alternar de contexto tenant
      */
     public function switch(Request $request): RedirectResponse
     {
@@ -49,7 +50,13 @@ class CambiarEmpresaController extends Controller
         session(['current_tenant_id' => $empresa->id]);
         $empresa->makeCurrent();
 
+        app(AuditoriaService::class)->registrar(
+            'cambio_empresa_switch',
+            'seguridad',
+            "Acceso privilegiado: Cambio de contexto de tenant a {$empresa->name} ({$empresa->slug})",
+            ['user' => $user, 'empresa_id' => $empresa->id]
+        );
+
         return back()->with('success', "Contexto cambiado a: {$empresa->name}.");
     }
 }
-
