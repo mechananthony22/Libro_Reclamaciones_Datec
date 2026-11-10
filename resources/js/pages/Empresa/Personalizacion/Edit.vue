@@ -25,6 +25,7 @@ const form = useForm({
 });
 
 const previewLogoUrl = ref<string | null>(props.empresa.logo_path);
+const logoError = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 
 function onFileChange(event: Event) {
@@ -32,6 +33,7 @@ function onFileChange(event: Event) {
     if (target.files && target.files[0]) {
         const file = target.files[0];
         form.logo = file;
+        logoError.value = false;
         previewLogoUrl.value = URL.createObjectURL(file);
     }
 }
@@ -64,190 +66,212 @@ function eliminarLogo() {
 
 <template>
     <AdminLayout>
-        <Head title="Personalización Visual (RF-009) - Datec Libro" />
+        <Head title="Logo y Colores - Datec Libro" />
 
         <div class="mx-auto max-w-5xl space-y-6">
-            <!-- Header con pestañas de navegación de la empresa -->
-            <div>
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <!-- Cabecera de Página (Estilo Admin/Empresas) -->
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div class="flex items-start gap-4">
+                    <div
+                        class="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/25"
+                    >
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                        </svg>
+                    </div>
                     <div>
-                        <div class="flex items-center gap-2">
-                            <span class="rounded-md bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800">RF-009</span>
-                            <h1 class="text-2xl font-bold tracking-tight text-slate-900">
-                                Personalización Visual del Libro
-                            </h1>
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                            Configuración de Empresa · Imagen Institucional
                         </div>
+                        <h1 class="mt-0.5 text-2xl font-extrabold tracking-tight text-slate-900">
+                            Logo y Colores del Libro
+                        </h1>
                         <p class="mt-1 text-sm text-slate-500">
-                            Personaliza el logotipo y color corporativo sin alterar el contenido legal obligatorio (RN-008).
+                            Personaliza el logotipo y color corporativo sin alterar el contenido legal obligatorio del libro.
                         </p>
                     </div>
+                </div>
 
-                    <div>
-                        <a
-                            :href="urlPublica"
-                            target="_blank"
-                            class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50"
-                        >
-                            <span>Ver Libro Público</span>
-                            <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                <div class="flex items-center gap-2">
+                    <a
+                        :href="urlPublica"
+                        target="_blank"
+                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900"
+                    >
+                        <span>Ver Libro Público</span>
+                        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Pestañas de Navegación de Configuración -->
+            <div class="flex gap-1 overflow-x-auto rounded-xl bg-slate-100/80 p-1 shadow-2xs">
+                <Link
+                    href="/configuracion/empresa"
+                    class="rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition"
+                >
+                    Identidad Legal
+                </Link>
+                <Link
+                    href="/configuracion/personalizacion"
+                    class="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition"
+                >
+                    Logo y Colores
+                </Link>
+                <Link
+                    href="/configuracion/establecimientos"
+                    class="rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition"
+                >
+                    Establecimientos / Sedes
+                </Link>
+            </div>
+
+            <!-- Previsualización en Vivo de Cabecera -->
+            <div class="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
-                        </a>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-900">Previsualización en Tiempo Real</h2>
+                            <p class="text-xs text-slate-500">Así verán tus clientes la cabecera del portal público en <span class="font-mono text-slate-700">/l/{{ empresa.slug }}</span>.</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Tabs de configuración de empresa -->
-                <nav class="mt-6 flex border-b border-slate-200 gap-6 text-sm font-medium">
-                    <Link
-                        href="/configuracion/empresa"
-                        class="border-b-2 border-transparent pb-3 text-slate-500 hover:border-slate-300 hover:text-slate-700"
-                    >
-                        Identidad Legal 
-                    </Link>
-                    <Link
-                        href="/configuracion/personalizacion"
-                        class="border-b-2 border-blue-600 pb-3 text-blue-600 font-semibold"
-                    >
-                        Personalización Visual 
-                    </Link>
-                    <Link
-                        href="/configuracion/establecimientos"
-                        class="border-b-2 border-transparent pb-3 text-slate-500 hover:border-slate-300 hover:text-slate-700"
-                    >
-                        Establecimientos y Sedes 
-                    </Link>
-                </nav>
-            </div>
-
-            <!-- SIMULADOR / PREVISUALIZACIÓN EN VIVO (CRITERIO DE ACEPTACIÓN RF-009) -->
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-3">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        Previsualización en tiempo real del Libro Público
-                    </h2>
-                    <span class="text-[11px] text-slate-400 font-mono">/l/{{ empresa.slug }}</span>
-                </div>
-
-                <!-- Cabecera simulada -->
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div class="flex items-center justify-between bg-white rounded-lg p-3 border border-slate-200 shadow-2xs">
-                        <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-between rounded-xl border border-slate-200/80 bg-white p-4 shadow-2xs">
+                        <div class="flex items-center gap-3.5">
                             <img
-                                v-if="previewLogoUrl"
+                                v-if="previewLogoUrl && !logoError"
                                 :src="previewLogoUrl"
                                 alt="Logo"
-                                class="h-10 max-w-[140px] object-contain rounded"
+                                class="h-10 max-w-[140px] rounded-lg object-contain"
+                                @error="logoError = true"
                             />
                             <div
                                 v-else
-                                class="flex h-10 w-10 items-center justify-center rounded-lg text-white font-bold text-sm shadow-xs transition-colors"
+                                class="flex h-11 w-11 items-center justify-center rounded-xl text-white font-extrabold text-sm shadow-2xs transition-colors"
                                 :style="{ backgroundColor: form.color_primario }"
                             >
                                 {{ empresa.name.charAt(0).toUpperCase() }}
                             </div>
 
                             <div>
-                                <h3 class="font-bold text-slate-900 text-sm leading-tight">{{ empresa.name }}</h3>
-                                <p class="text-[11px] text-slate-500 font-mono">RUC: {{ empresa.ruc }}</p>
+                                <h3 class="text-sm font-extrabold text-slate-900 leading-tight">{{ empresa.name }}</h3>
+                                <p class="text-[11px] font-mono text-slate-400">RUC: {{ empresa.ruc }}</p>
                             </div>
                         </div>
 
-                        <div class="hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white shadow-2xs"
-                             :style="{ backgroundColor: form.color_primario }">
+                        <div
+                            class="hidden sm:inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-bold text-white shadow-2xs"
+                            :style="{ backgroundColor: form.color_primario }"
+                        >
                             <span>Libro de Reclamaciones</span>
                         </div>
                     </div>
                 </div>
-                <p class="text-[11px] text-slate-500">
-                    Si no se sube un logo, se mostrará el nombre comercial con la inicial de marca. La Razón Social y el RUC siempre permanecen inalterados conforme a ley.
-                </p>
             </div>
 
-            <!-- FORMULARIO DE PERSONALIZACIÓN -->
+            <!-- Formulario de Personalización -->
             <form @submit.prevent="submit" class="space-y-6">
-                <!-- SECCIÓN 1: SUBIDA DE LOGOTIPO -->
-                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">1</span>
-                            Logotipo de la Empresa (Opcional)
-                        </h2>
+                <!-- Sección 1: Logotipo -->
+                <div class="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-bold text-slate-900">Logotipo de la Empresa</h2>
+                                <p class="text-xs text-slate-500">Formato horizontal recomendado con fondo transparente.</p>
+                            </div>
+                        </div>
 
                         <button
                             v-if="empresa.logo_path"
                             type="button"
                             @click="eliminarLogo"
-                            class="text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline"
+                            class="cursor-pointer text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline"
                         >
                             Quitar logotipo actual
                         </button>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 items-center">
-                        <!-- Vista previa actual -->
-                        <div class="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl p-6 bg-slate-50/50 text-center">
-                            <div v-if="previewLogoUrl" class="space-y-2">
-                                <img :src="previewLogoUrl" alt="Logo Previo" class="max-h-20 max-w-full mx-auto object-contain" />
-                                <span class="block text-[11px] text-emerald-700 font-medium">Logotipo seleccionado</span>
+                        <div class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-6 text-center">
+                            <div v-if="previewLogoUrl && !logoError" class="space-y-2">
+                                <img
+                                    :src="previewLogoUrl"
+                                    alt="Logo Previo"
+                                    class="max-h-20 max-w-full mx-auto object-contain"
+                                    @error="logoError = true"
+                                />
+                                <span class="block text-[11px] font-bold text-emerald-700">Logotipo seleccionado</span>
                             </div>
                             <div v-else class="text-slate-400 space-y-1">
                                 <svg class="h-10 w-10 mx-auto text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
-                                <span class="block text-xs font-medium text-slate-500">Sin logotipo</span>
-                                <span class="block text-[10px]">Se usará la inicial corporativa</span>
+                                <span class="block text-xs font-semibold text-slate-600">Sin logotipo</span>
+                                <span class="block text-[10px] text-slate-400">Se usará la inicial corporativa</span>
                             </div>
                         </div>
 
-                        <!-- Selector de archivo -->
                         <div class="sm:col-span-2 space-y-2">
-                            <label class="block text-xs font-semibold text-slate-700">Seleccionar archivo de imagen</label>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Seleccionar imagen</label>
                             <input
                                 ref="fileInput"
                                 type="file"
                                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
                                 @change="onFileChange"
-                                class="w-full text-xs text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                                class="w-full text-xs text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
                             />
-                            <p class="text-[11px] text-slate-500">
-                                Formatos admitidos: PNG, JPG, JPEG, WEBP o SVG transparente. Tamaño máximo: 2 MB.
+                            <p class="text-[11px] text-slate-400">
+                                Formatos permitidos: PNG, JPG, JPEG, WEBP o SVG transparente. Tamaño máximo: 2 MB.
                             </p>
-                            <div v-if="form.errors.logo" class="text-xs text-rose-600">{{ form.errors.logo }}</div>
+                            <div v-if="form.errors.logo" class="text-xs text-rose-600 font-semibold">{{ form.errors.logo }}</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- SECCIÓN 2: COLOR PRIMARIO ACCESIBLE -->
-                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
-                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">2</span>
-                        Color Primario de Marca (RF-009)
-                    </h2>
+                <!-- Sección 2: Color Primario -->
+                <div class="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs">
+                    <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-900">Color Primario de Marca</h2>
+                            <p class="text-xs text-slate-500">Paleta segura de alto contraste para botones y cabeceras del portal.</p>
+                        </div>
+                    </div>
 
-                    <p class="text-xs text-slate-500">
-                        Selecciona un color de nuestra paleta segura de alto contraste o ingresa tu código HEX institucional:
-                    </p>
-
-                    <!-- Paleta de colores predefinida -->
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <button
                             v-for="color in paletaSegura"
                             :key="color.hex"
                             type="button"
                             @click="seleccionarColor(color.hex)"
-                            class="flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition hover:shadow-2xs"
-                            :class="form.color_primario.toUpperCase() === color.hex.toUpperCase() ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-500/20' : 'border-slate-200 bg-white'"
+                            class="flex cursor-pointer items-center gap-2.5 rounded-xl border p-2.5 text-left transition hover:shadow-2xs"
+                            :class="form.color_primario.toUpperCase() === color.hex.toUpperCase() ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-500/20' : 'border-slate-200 bg-white hover:border-slate-300'"
                         >
                             <span
                                 class="h-6 w-6 rounded-lg shrink-0 shadow-xs border border-black/10"
                                 :style="{ backgroundColor: color.hex }"
                             ></span>
                             <div class="truncate">
-                                <span class="block text-xs font-medium text-slate-800 truncate">{{ color.nombre }}</span>
+                                <span class="block text-xs font-bold text-slate-800 truncate">{{ color.nombre }}</span>
                                 <span class="block font-mono text-[10px] text-slate-400">{{ color.hex }}</span>
                             </div>
                         </button>
@@ -255,19 +279,19 @@ function eliminarLogo() {
 
                     <!-- Selector personalizado -->
                     <div class="pt-2 flex items-center gap-3">
-                        <label class="text-xs font-semibold text-slate-700">O elige un color personalizado:</label>
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-500">O ingresa un color personalizado:</label>
                         <input
                             v-model="form.color_primario"
                             type="color"
-                            class="h-9 w-14 cursor-pointer rounded-lg border border-slate-300 bg-white p-1"
+                            class="h-9 w-14 cursor-pointer rounded-xl border border-slate-200 bg-white p-1"
                         />
                         <input
                             v-model="form.color_primario"
                             type="text"
                             maxlength="7"
-                            class="w-28 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-mono uppercase focus:border-blue-500 focus:outline-hidden"
+                            class="w-28 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-mono uppercase focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
-                        <div v-if="form.errors.color_primario" class="text-xs text-rose-600">{{ form.errors.color_primario }}</div>
+                        <div v-if="form.errors.color_primario" class="text-xs text-rose-600 font-semibold">{{ form.errors.color_primario }}</div>
                     </div>
                 </div>
 
@@ -275,7 +299,7 @@ function eliminarLogo() {
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50 transition"
+                        class="cursor-pointer rounded-xl bg-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 disabled:opacity-50"
                     >
                         {{ form.processing ? 'Guardando cambios...' : 'Guardar Personalización' }}
                     </button>
@@ -284,4 +308,3 @@ function eliminarLogo() {
         </div>
     </AdminLayout>
 </template>
-

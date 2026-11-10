@@ -208,13 +208,18 @@ function submit() {
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700">Plan Asignado *</label>
-                            <select
-                                v-model="form.plan"
-                                class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-none"
-                            >
-                                <option v-for="p in planes" :key="p.value" :value="p.value">{{ p.label }}</option>
-                            </select>
+                            <label class="block text-xs font-bold text-slate-700">Plan Asignado</label>
+                            <div class="mt-1 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50/60 p-2.5 text-xs font-bold text-blue-900 shadow-2xs">
+                                <div class="flex items-center gap-2">
+                                    <svg class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                    </svg>
+                                    <span>Plan Corporativo / E-Commerce</span>
+                                </div>
+                                <span class="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-extrabold uppercase text-white">
+                                    Full Activo
+                                </span>
+                            </div>
                         </div>
 
                         <div>

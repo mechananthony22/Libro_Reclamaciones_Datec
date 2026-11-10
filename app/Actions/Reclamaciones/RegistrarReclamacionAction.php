@@ -4,6 +4,7 @@ namespace App\Actions\Reclamaciones;
 
 use App\Enums\EstadoReclamacion;
 use App\Jobs\EnviarConstanciaReclamacionJob;
+use App\Jobs\NotificarNuevaReclamacionEmpresaJob;
 use App\Models\Empresa;
 use App\Models\Reclamacion;
 use App\Models\ReclamacionAdjunto;
@@ -149,8 +150,9 @@ class RegistrarReclamacionAction
                 }
             }
 
-            // Despachar tarea asíncrona de envío de correo
+            // Despachar tareas asíncronas de envío de correo
             EnviarConstanciaReclamacionJob::dispatch($reclamacion);
+            NotificarNuevaReclamacionEmpresaJob::dispatch($reclamacion);
 
             return $reclamacion;
         });

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 interface Props {
     empresa: {
@@ -30,10 +30,21 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Copiar código de seguimiento al portapapeles
+const mostrarModalCopiado = ref(false);
+
+// Copiar código de seguimiento al portapapeles y mostrar modal estilizado
 function copiarToken() {
-    navigator.clipboard.writeText(props.reclamacion.token_consulta);
-    alert('Código de seguimiento copiado al portapapeles.');
+    if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(props.reclamacion.token_consulta);
+    } else {
+        const input = document.createElement('textarea');
+        input.value = props.reclamacion.token_consulta;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+    }
+    mostrarModalCopiado.value = true;
 }
 </script>
 
@@ -161,6 +172,54 @@ function copiarToken() {
                 </p>
             </div>
         </div>
+
+        <!-- Modal elegante de Confirmación de Copiado con botón OK -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+            >
+                <div
+                    v-if="mostrarModalCopiado"
+                    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+                    @click.self="mostrarModalCopiado = false"
+                >
+                    <div
+                        class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 text-center transform transition-all animate-in fade-in zoom-in-95 duration-150"
+                    >
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-4 shadow-sm border border-blue-100">
+                            <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+
+                        <h3 class="text-lg font-bold text-slate-900 mb-1">
+                            ¡Código Copiado!
+                        </h3>
+                        <p class="text-sm text-slate-500 mb-4">
+                            El código de consulta seguro ha sido copiado exitosamente al portapapeles.
+                        </p>
+
+                        <!-- Vista previa del código -->
+                        <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 mb-5 font-mono text-xs text-slate-700 font-semibold break-all select-all">
+                            {{ reclamacion.token_consulta }}
+                        </div>
+
+                        <button
+                            type="button"
+                            @click="mostrarModalCopiado = false"
+                            class="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition cursor-pointer"
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
     </div>
 </template>
 

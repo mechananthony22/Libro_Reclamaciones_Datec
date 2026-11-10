@@ -46,10 +46,11 @@ class HandleInertiaRequests extends Middleware
                     'name' => Empresa::current()->name,
                     'slug' => Empresa::current()->slug,
                     'color_primario' => Empresa::current()->color_primario,
+                    'logo_path' => Empresa::current()->logo_path,
                 ] : null,
                 'empresas_usuario' => fn () => $request->user() ? ($request->user()->isSuperAdmin()
-                    ? Empresa::select('id', 'name', 'slug')->get()
-                    : $request->user()->empresas()->wherePivot('activo', true)->select('tenants.id', 'tenants.name', 'tenants.slug')->get()
+                    ? Empresa::select('id', 'name', 'slug', 'color_primario', 'logo_path')->get()
+                    : $request->user()->empresas()->wherePivot('activo', true)->select('tenants.id', 'tenants.name', 'tenants.slug', 'tenants.color_primario', 'tenants.logo_path')->get()
                 ) : [],
             ],
             'flash' => [

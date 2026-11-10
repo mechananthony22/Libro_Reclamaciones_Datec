@@ -35,6 +35,7 @@ class ConsultaEstadoController extends Controller
                 'razon_social' => $empresa->razon_social,
                 'ruc' => $empresa->ruc,
                 'color_primario' => $empresa->color_primario ?: '#2563EB',
+                'logo_path' => $empresa->logo_path,
                 'slug' => $empresa->slug,
             ],
             'expediente' => null,
@@ -130,6 +131,7 @@ class ConsultaEstadoController extends Controller
                 'razon_social' => $empresa->razon_social,
                 'ruc' => $empresa->ruc,
                 'color_primario' => $empresa->color_primario ?: '#2563EB',
+                'logo_path' => $empresa->logo_path,
                 'slug' => $empresa->slug,
             ],
             'expediente' => $payloadExpediente,
@@ -165,6 +167,24 @@ class ConsultaEstadoController extends Controller
         $email = $consumidor['email'] ?? '';
         $emailEnmascarado = $this->enmascararCorreo($email);
 
+        // Obtener la última respuesta formal si existe
+        $ultimaRespuesta = $reclamacion->respuestas()->latest('version')->first();
+        $respuestaData = null;
+
+        if ($ultimaRespuesta) {
+            $respuestaData = [
+                'decision' => $ultimaRespuesta->decision?->value,
+                'decision_label' => $ultimaRespuesta->decision?->label() ?? 'Atendido',
+                'propuesta_solucion' => $ultimaRespuesta->propuesta_solucion,
+                'fundamento_legal' => $ultimaRespuesta->fundamento_legal,
+                'autor_nombre' => $ultimaRespuesta->autor_nombre,
+                'autor_cargo' => $ultimaRespuesta->autor_cargo,
+                'version' => $ultimaRespuesta->version,
+                'fecha_respuesta' => $ultimaRespuesta->fecha_respuesta?->format('d/m/Y H:i:s') ?? $ultimaRespuesta->created_at?->format('d/m/Y H:i:s'),
+                'adjuntos' => $ultimaRespuesta->adjuntos_paths ?? [],
+            ];
+        }
+
         return [
             'numero_hoja' => $reclamacion->numero_hoja,
             'tipo' => $reclamacion->tipo->value,
@@ -183,6 +203,7 @@ class ConsultaEstadoController extends Controller
             'pedido_consumidor' => $reclamacion->pedido_consumidor,
             'token_consulta' => $reclamacion->token_consulta,
             'adjuntos_count' => $reclamacion->adjuntos_count ?? 0,
+            'respuesta' => $respuestaData,
             'url_descarga_pdf' => route('libro.constancia.pdf', [
                 'slug' => $empresa->slug,
                 'token' => $reclamacion->token_consulta,

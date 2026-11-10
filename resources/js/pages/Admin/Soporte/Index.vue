@@ -365,28 +365,29 @@ function estadoBadge(ticket: TicketItem) {
             </div>
         </div>
 
-        <!-- Modal para Solicitar Acceso Delegado -->
+        <!-- Modal para Solicitar Acceso Delegado (Estilo CreateModal.vue) -->
         <div
             v-if="modalSolicitudAbierto"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 sm:p-6 backdrop-blur-xs overflow-y-auto animate-fade-in"
+            @click.self="modalSolicitudAbierto = false"
         >
-            <div class="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-xl">
-                <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+            <div class="relative flex w-full max-w-lg flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-auto">
+                <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
                     <div class="flex items-center gap-3">
-                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/25">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-base font-bold text-slate-900">Solicitar Acceso Temporal Delegado</h3>
-                            <p class="text-[11px] text-slate-500">El cliente deberá autorizar la solicitud desde su panel</p>
+                            <h2 class="text-base font-extrabold text-slate-900">Solicitar Acceso Delegado</h2>
+                            <p class="text-xs text-slate-500">El cliente deberá autorizar la solicitud desde su panel.</p>
                         </div>
                     </div>
                     <button
                         type="button"
                         @click="modalSolicitudAbierto = false"
-                        class="cursor-pointer rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 cursor-pointer"
                     >
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -394,59 +395,67 @@ function estadoBadge(ticket: TicketItem) {
                     </button>
                 </div>
 
-                <form @submit.prevent="enviarSolicitud" class="space-y-4 text-xs">
+                <form @submit.prevent="enviarSolicitud" class="p-6 space-y-4 text-xs">
                     <div>
-                        <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Empresa cliente *</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Empresa Cliente <span class="text-rose-500">*</span>
+                        </label>
                         <select
                             v-model="formSolicitud.empresa_id"
                             required
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                         >
                             <option value="" disabled>Seleccione una empresa</option>
                             <option v-for="emp in empresas" :key="emp.id" :value="emp.id">
                                 {{ emp.name }}
                             </option>
                         </select>
-                        <p v-if="formSolicitud.errors.empresa_id" class="mt-1 text-[11px] text-rose-600">
+                        <p v-if="formSolicitud.errors.empresa_id" class="mt-1 text-[11px] text-rose-600 font-semibold">
                             {{ formSolicitud.errors.empresa_id }}
                         </p>
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Título del requerimiento *</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Título del Requerimiento <span class="text-rose-500">*</span>
+                        </label>
                         <input
                             v-model="formSolicitud.titulo"
                             type="text"
                             required
                             maxlength="150"
                             placeholder="Ej. Revisión técnica de plantilla de constancia"
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
-                        <p v-if="formSolicitud.errors.titulo" class="mt-1 text-[11px] text-rose-600">
+                        <p v-if="formSolicitud.errors.titulo" class="mt-1 text-[11px] text-rose-600 font-semibold">
                             {{ formSolicitud.errors.titulo }}
                         </p>
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Motivo técnico justificado *</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Motivo Técnico Justificado <span class="text-rose-500">*</span>
+                        </label>
                         <textarea
                             v-model="formSolicitud.motivo"
                             rows="3"
                             required
                             maxlength="1000"
                             placeholder="Describa de manera detallada la incidencia técnica o motivo que requiere inspección..."
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            class="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-xs font-medium text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 leading-relaxed"
                         ></textarea>
-                        <p v-if="formSolicitud.errors.motivo" class="mt-1 text-[11px] text-rose-600">
+                        <p v-if="formSolicitud.errors.motivo" class="mt-1 text-[11px] text-rose-600 font-semibold">
                             {{ formSolicitud.errors.motivo }}
                         </p>
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Horas de vigencia solicitadas *</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Horas de Vigencia Solicitadas <span class="text-rose-500">*</span>
+                        </label>
                         <select
                             v-model="formSolicitud.horas_vigencia"
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                         >
                             <option :value="12">12 horas</option>
                             <option :value="24">24 horas (1 día)</option>
@@ -456,20 +465,23 @@ function estadoBadge(ticket: TicketItem) {
                         </select>
                     </div>
 
-                    <div class="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+                    <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
                         <button
                             type="button"
                             @click="modalSolicitudAbierto = false"
-                            class="cursor-pointer rounded-xl px-4 py-2 font-bold text-slate-600 transition hover:bg-slate-100"
+                            class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             :disabled="formSolicitud.processing"
-                            class="cursor-pointer rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                            class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
                         >
-                            {{ formSolicitud.processing ? 'Enviando...' : 'Crear solicitud' }}
+                            <svg v-if="!formSolicitud.processing" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>{{ formSolicitud.processing ? 'Enviando...' : 'Crear Solicitud' }}</span>
                         </button>
                     </div>
                 </form>

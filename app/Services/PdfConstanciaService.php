@@ -21,11 +21,30 @@ class PdfConstanciaService
         $consumidor = $reclamacion->datos_consumidor ?? [];
         $proveedorSnapshot = $reclamacion->datos_legales_snapshot ?? [];
 
+        $logoBase64 = null;
+        if (! empty($empresa->logo_path)) {
+            $relativePath = str_replace('/storage/', '', $empresa->logo_path);
+            $fullPath = storage_path('app/public/'.$relativePath);
+            if (file_exists($fullPath)) {
+                $fileContent = @file_get_contents($fullPath);
+                if ($fileContent !== false) {
+                    $mimeType = @mime_content_type($fullPath) ?: 'image/png';
+                    $logoBase64 = 'data:'.$mimeType.';base64,'.base64_encode($fileContent);
+                }
+            }
+        }
+
+        $colorPrimario = ! empty($empresa->color_primario) ? $empresa->color_primario : '#1e40af';
+        $ultimaRespuesta = $reclamacion->respuestas()->latest('version')->first();
+
         $pdf = Pdf::loadView('pdf.constancia_reclamacion', [
             'reclamacion' => $reclamacion,
             'empresa' => $empresa,
             'consumidor' => $consumidor,
             'proveedor' => $proveedorSnapshot,
+            'respuesta' => $ultimaRespuesta,
+            'logoBase64' => $logoBase64,
+            'colorPrimario' => $colorPrimario,
         ]);
 
         $pdf->setPaper('a4', 'portrait');

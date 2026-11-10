@@ -102,20 +102,31 @@ afterEach(function () {
     Carbon::setTestNow();
 });
 
-test('superadministrador no puede acceder a expedientes de una empresa sin autorizacion activa de soporte', function () {
+test('superadministrador tiene acceso global a expedientes de cualquier empresa bajo supervision de plataforma', function () {
     $this->actingAs($this->superadmin)
         ->withSession(['current_tenant_id' => $this->empresaA->id])
         ->get('/expedientes')
-        ->assertForbidden();
+        ->assertOk();
 
     $this->actingAs($this->superadmin)
         ->withSession(['current_tenant_id' => $this->empresaA->id])
         ->get("/expedientes/{$this->reclamacionA->id}")
-        ->assertForbidden();
+        ->assertOk();
 
     $this->actingAs($this->superadmin)
         ->withSession(['current_tenant_id' => $this->empresaA->id])
         ->get('/expedientes/exportar?formato=csv')
+        ->assertOk();
+});
+
+test('usuario ajeno sin membresia ni rol superadmin no puede acceder a expedientes de otra empresa', function () {
+    $usuarioExterno = User::factory()->create([
+        'is_superadmin' => false,
+    ]);
+
+    $this->actingAs($usuarioExterno)
+        ->withSession(['current_tenant_id' => $this->empresaA->id])
+        ->get('/expedientes')
         ->assertForbidden();
 });
 
@@ -199,8 +210,9 @@ test('empresa puede autorizar y revocar acceso delegado de soporte tecnico', fun
     expect($ticket->isActivo())->toBeFalse();
     expect($ticket->motivo_revocacion)->toBe('Problema resuelto');
 
-    // Ahora el superadmin vuelve a estar bloqueado
-    $this->actingAs($this->superadmin)
+    // Un usuario externo sin membresía ni rol superadmin no puede acceder
+    $usuarioExterno = User::factory()->create(['is_superadmin' => false]);
+    $this->actingAs($usuarioExterno)
         ->withSession(['current_tenant_id' => $this->empresaA->id])
         ->get('/expedientes')
         ->assertForbidden();

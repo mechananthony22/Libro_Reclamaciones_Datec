@@ -18,6 +18,7 @@ interface EmpresaItem {
     representante_email?: string | null;
     representante_telefono?: string | null;
     color_primario?: string | null;
+    logo_path?: string | null;
     estado: string;
     plan: string;
     activo: boolean;
@@ -240,6 +241,8 @@ function iniciales(nombre: string): string {
         .map((p) => p.charAt(0).toUpperCase())
         .join('');
 }
+
+const logosConError = ref<Record<number, boolean>>({});
 
 // Pestañas rápidas de estado con sus contadores
 const pestanasEstado = computed(() => [
@@ -482,11 +485,23 @@ const porcentajeActivas = computed(() =>
                                 :key="emp.id"
                                 class="group transition-colors hover:bg-slate-50/70"
                             >
-                                <!-- Empresa con avatar de marca -->
+                                <!-- Empresa con logotipo o avatar de marca -->
                                 <td class="px-5 py-3.5">
                                     <div class="flex items-center gap-3">
                                         <div
-                                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[11px] font-black text-white shadow-2xs"
+                                            v-if="emp.logo_path && !logosConError[emp.id]"
+                                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white p-1 shadow-2xs overflow-hidden"
+                                        >
+                                            <img
+                                                :src="emp.logo_path"
+                                                :alt="emp.name"
+                                                class="h-full w-full object-contain"
+                                                @error="logosConError[emp.id] = true"
+                                            />
+                                        </div>
+                                        <div
+                                            v-else
+                                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[11px] font-black text-white shadow-2xs"
                                             :style="{ backgroundColor: emp.color_primario || '#2563EB' }"
                                         >
                                             {{ iniciales(emp.name) }}
@@ -675,125 +690,149 @@ const porcentajeActivas = computed(() =>
             </div>
         </div>
 
-        <!-- Modal para Modificar Estado Operativo -->
-        <div v-if="showModalEstado" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-            <div class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl">
-                <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+        <!-- Modal para Modificar Estado Operativo (Estilo CreateModal.vue) -->
+        <div
+            v-if="showModalEstado"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 sm:p-6 backdrop-blur-xs overflow-y-auto animate-fade-in"
+            @click.self="showModalEstado = false"
+        >
+            <div class="relative flex w-full max-w-md flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-auto">
+                <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
                     <div class="flex items-center gap-3">
-                        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-500/25">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" />
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-base font-bold text-slate-900">Cambiar estado de servicio</h3>
-                            <p class="text-[11px] text-slate-500">{{ empresaSeleccionadaEstado?.name }}</p>
+                            <h2 class="text-base font-extrabold text-slate-900">Estado de Servicio</h2>
+                            <p class="text-xs text-slate-500">{{ empresaSeleccionadaEstado?.name }}</p>
                         </div>
                     </div>
-                    <button type="button" @click="showModalEstado = false" class="cursor-pointer rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                    <button
+                        type="button"
+                        @click="showModalEstado = false"
+                        class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 cursor-pointer"
+                    >
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <form @submit.prevent="submitCambiarEstado" class="space-y-4 text-xs">
+                <form @submit.prevent="submitCambiarEstado" class="p-6 space-y-4 text-xs">
                     <div>
-                        <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Nuevo estado operativo</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Nuevo Estado Operativo <span class="text-rose-500">*</span>
+                        </label>
                         <select
                             v-model="formEstado.estado"
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 transition focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
                         >
                             <option v-for="est in estados" :key="est.value" :value="est.value">
                                 {{ est.label }}
                             </option>
                         </select>
-                        <p v-if="formEstado.errors.estado" class="mt-1 text-[11px] text-rose-600">{{ formEstado.errors.estado }}</p>
+                        <p v-if="formEstado.errors.estado" class="mt-1 text-[11px] text-rose-600 font-semibold">{{ formEstado.errors.estado }}</p>
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Motivo del cambio</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Motivo del Cambio <span class="text-rose-500">*</span>
+                        </label>
                         <textarea
                             v-model="formEstado.motivo"
                             rows="3"
                             required
-                            placeholder="Justificación administrativa para el registro de auditoría..."
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder="Justificación administrativa para el registro de auditoría inmutable..."
+                            class="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-xs font-medium text-slate-800 placeholder:text-slate-400 transition focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 leading-relaxed"
                         ></textarea>
-                        <p v-if="formEstado.errors.motivo" class="mt-1 text-[11px] text-rose-600">{{ formEstado.errors.motivo }}</p>
+                        <p v-if="formEstado.errors.motivo" class="mt-1 text-[11px] text-rose-600 font-semibold">{{ formEstado.errors.motivo }}</p>
                     </div>
 
-                    <div class="flex justify-end gap-2 border-t border-slate-100 pt-3">
+                    <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
                         <button
                             type="button"
                             @click="showModalEstado = false"
-                            class="cursor-pointer rounded-xl px-4 py-2 font-bold text-slate-600 transition hover:bg-slate-100"
+                            class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             :disabled="formEstado.processing"
-                            class="cursor-pointer rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                            class="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-amber-500/20 hover:bg-amber-700 disabled:opacity-50 transition cursor-pointer"
                         >
-                            {{ formEstado.processing ? 'Guardando...' : 'Guardar cambio' }}
+                            <span>{{ formEstado.processing ? 'Guardando...' : 'Guardar Cambio' }}</span>
                         </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Modal para Generar Enlace de Invitación -->
-        <div v-if="showModalInvitacion" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-            <div class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl">
-                <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+        <!-- Modal para Generar Enlace de Invitación (Estilo CreateModal.vue) -->
+        <div
+            v-if="showModalInvitacion"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 sm:p-6 backdrop-blur-xs overflow-y-auto animate-fade-in"
+            @click.self="showModalInvitacion = false"
+        >
+            <div class="relative flex w-full max-w-md flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-auto">
+                <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
                     <div class="flex items-center gap-3">
-                        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/25">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-base font-bold text-slate-900">Invitar administrador</h3>
-                            <p class="text-[11px] text-slate-500">Enlace seguro de un solo uso para {{ empresaSeleccionadaInvitacion?.name }}</p>
+                            <h2 class="text-base font-extrabold text-slate-900">Invitar Administrador</h2>
+                            <p class="text-xs text-slate-500">{{ empresaSeleccionadaInvitacion?.name }}</p>
                         </div>
                     </div>
-                    <button type="button" @click="showModalInvitacion = false" class="cursor-pointer rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                    <button
+                        type="button"
+                        @click="showModalInvitacion = false"
+                        class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 cursor-pointer"
+                    >
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <form @submit.prevent="submitInvitar" class="space-y-4 text-xs">
+                <form @submit.prevent="submitInvitar" class="p-6 space-y-4 text-xs">
                     <div>
-                        <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Correo electrónico *</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Correo Electrónico <span class="text-rose-500">*</span>
+                        </label>
                         <input
                             v-model="formInvitacion.email"
                             type="email"
                             required
                             placeholder="admin@empresa.com"
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
-                        <p v-if="formInvitacion.errors.email" class="mt-1 text-[11px] text-rose-600">{{ formInvitacion.errors.email }}</p>
+                        <p v-if="formInvitacion.errors.email" class="mt-1 text-[11px] text-rose-600 font-semibold">{{ formInvitacion.errors.email }}</p>
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Nombre (opcional)</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Nombre Completo <span class="text-slate-400 font-normal">(Opcional)</span>
+                        </label>
                         <input
                             v-model="formInvitacion.nombre"
                             type="text"
                             placeholder="Juan Pérez"
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-medium text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Rol</label>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Rol de Acceso</label>
                             <select
                                 v-model="formInvitacion.rol"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                             >
                                 <option v-for="r in roles" :key="r.value" :value="r.value">
                                     {{ r.label }}
@@ -801,10 +840,10 @@ const porcentajeActivas = computed(() =>
                             </select>
                         </div>
                         <div>
-                            <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Vigencia</label>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Vigencia del Token</label>
                             <select
                                 v-model="formInvitacion.horas_expiracion"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                             >
                                 <option :value="24">24 horas</option>
                                 <option :value="72">72 horas (recomendado)</option>
@@ -813,96 +852,116 @@ const porcentajeActivas = computed(() =>
                         </div>
                     </div>
 
-                    <div class="flex justify-end gap-2 border-t border-slate-100 pt-3">
+                    <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
                         <button
                             type="button"
                             @click="showModalInvitacion = false"
-                            class="cursor-pointer rounded-xl px-4 py-2 font-bold text-slate-600 transition hover:bg-slate-100"
+                            class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             :disabled="formInvitacion.processing"
-                            class="cursor-pointer rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                            class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
                         >
-                            {{ formInvitacion.processing ? 'Generando...' : 'Generar invitación' }}
+                            <svg v-if="!formInvitacion.processing" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>{{ formInvitacion.processing ? 'Generando...' : 'Generar Invitación' }}</span>
                         </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Modal para Procesar Baja Formal y Custodia Legal -->
-        <div v-if="showModalBaja && empresaSeleccionadaBaja" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-            <div class="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
-                <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+        <!-- Modal para Procesar Baja Formal y Custodia Legal (Estilo CreateModal.vue) -->
+        <div
+            v-if="showModalBaja && empresaSeleccionadaBaja"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 sm:p-6 backdrop-blur-xs overflow-y-auto animate-fade-in"
+            @click.self="showModalBaja = false"
+        >
+            <div class="relative flex w-full max-w-lg flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-auto">
+                <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
                     <div class="flex items-center gap-3">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 shrink-0">
-                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-600 text-white shadow-md shadow-rose-500/25">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-base font-bold text-slate-900">Baja Formal y Custodia Legal</h3>
-                            <p class="text-[11px] text-slate-500">{{ empresaSeleccionadaBaja.razon_social || empresaSeleccionadaBaja.name }} &bull; RUC {{ empresaSeleccionadaBaja.ruc }}</p>
+                            <h2 class="text-base font-extrabold text-slate-900">Baja Formal y Custodia Legal</h2>
+                            <p class="text-xs text-slate-500">{{ empresaSeleccionadaBaja.razon_social || empresaSeleccionadaBaja.name }} · <span class="font-mono">RUC {{ empresaSeleccionadaBaja.ruc }}</span></p>
                         </div>
                     </div>
-                    <button type="button" @click="showModalBaja = false" class="cursor-pointer rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                    <button
+                        type="button"
+                        @click="showModalBaja = false"
+                        class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 cursor-pointer"
+                    >
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <form @submit.prevent="submitBaja" class="space-y-4 text-xs">
+                <form @submit.prevent="submitBaja" class="p-6 space-y-4 text-xs">
                     <div>
-                        <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-700">Motivo de la baja o finalización de contrato *</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Motivo de la Baja o Cese de Servicio <span class="text-rose-500">*</span>
+                        </label>
                         <textarea
                             v-model="formBaja.motivo"
                             rows="3"
                             required
                             placeholder="Indique la causa formal del cese de servicio..."
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                            class="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-xs font-medium text-slate-800 placeholder:text-slate-400 transition focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500 leading-relaxed"
                         ></textarea>
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-700">Plazo de Retención Legal de Pruebas (Meses)</label>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Plazo de Retención Legal de Pruebas (Meses) <span class="text-rose-500">*</span>
+                        </label>
                         <input
                             v-model.number="formBaja.meses_retencion"
                             type="number"
                             min="1"
                             max="120"
                             required
-                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 transition focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
                         />
                         <p class="mt-1 text-[11px] text-slate-400">Por defecto: 24 meses (2 años conforme al Código de Protección y Defensa del Consumidor INDECOPI).</p>
                     </div>
 
-                    <div class="rounded-xl bg-rose-50/80 p-3.5 text-[11px] text-rose-900 border border-rose-200 space-y-1">
-                        <div class="font-bold">Efectos inmediatos de esta operación:</div>
-                        <ul class="list-disc pl-4 space-y-0.5 text-rose-800">
+                    <div class="rounded-xl bg-rose-50/70 p-3.5 text-[11px] text-rose-900 border border-rose-200/80 space-y-1.5">
+                        <div class="font-bold flex items-center gap-1.5 text-rose-950">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Efectos inmediatos de esta operación:
+                        </div>
+                        <ul class="list-disc pl-5 space-y-0.5 text-rose-800">
                             <li>Se revocarán los accesos de todos los usuarios vinculados a este cliente.</li>
                             <li>El formulario público quedará clausurado con aviso de retención legal.</li>
-                            <li>Se compilará el paquete ZIP de custodia probatoria (CSVs + constancias) con hash criptográfico SHA-256.</li>
+                            <li>Se compilará el paquete ZIP de custodia probatoria (CSVs + constancias) con hash SHA-256.</li>
                         </ul>
                     </div>
 
-                    <div class="flex justify-end gap-2 border-t border-slate-100 pt-3">
+                    <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
                         <button
                             type="button"
                             @click="showModalBaja = false"
-                            class="cursor-pointer rounded-xl px-4 py-2 font-bold text-slate-600 transition hover:bg-slate-100"
+                            class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             :disabled="formBaja.processing"
-                            class="cursor-pointer rounded-xl bg-rose-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-rose-700 disabled:opacity-50"
+                            class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-rose-500/20 hover:bg-rose-700 disabled:opacity-50 transition cursor-pointer"
                         >
-                            {{ formBaja.processing ? 'Procesando...' : 'Confirmar Baja y Custodia' }}
+                            <span>{{ formBaja.processing ? 'Procesando...' : 'Confirmar Baja y Custodia' }}</span>
                         </button>
                     </div>
                 </form>

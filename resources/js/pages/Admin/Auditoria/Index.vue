@@ -366,30 +366,35 @@ function obtenerClaseModulo(modulo: string) {
                 </div>
             </div>
 
-            <!-- Modal de Detalle de Auditoría Forense -->
+            <!-- Modal de Detalle de Auditoría Forense (Estilo CreateModal.vue) -->
             <div
                 v-if="modalDetalle"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 sm:p-6 backdrop-blur-xs overflow-y-auto animate-fade-in"
+                @click.self="modalDetalle = null"
             >
-                <div class="max-h-[85vh] w-full max-w-xl space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-                    <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+                <div class="relative flex max-h-[88vh] w-full max-w-xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-auto">
+                    <!-- Cabecera del Modal -->
+                    <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
                         <div class="flex items-center gap-3">
-                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/25">
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-base font-bold text-slate-900">Detalle de Auditoría #{{ modalDetalle.id }}</h3>
-                                <p class="font-mono text-[11px] text-slate-500">
+                                <h2 class="text-base font-extrabold text-slate-900">
+                                    Detalle de Auditoría Forense #{{ modalDetalle.id }}
+                                </h2>
+                                <p class="font-mono text-xs text-slate-500">
                                     {{ modalDetalle.accion }} · {{ new Date(modalDetalle.created_at).toLocaleString('es-PE') }}
                                 </p>
                             </div>
                         </div>
+
                         <button
                             type="button"
                             @click="modalDetalle = null"
-                            class="cursor-pointer rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                            class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 cursor-pointer"
                         >
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -397,33 +402,33 @@ function obtenerClaseModulo(modulo: string) {
                         </button>
                     </div>
 
-                    <div class="space-y-3 text-xs">
+                    <div class="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
                         <div>
-                            <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-400">Descripción</span>
-                            <p class="rounded-xl border border-slate-200/80 bg-slate-50 p-3 text-slate-700">{{ modalDetalle.descripcion }}</p>
+                            <span class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Descripción</span>
+                            <p class="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 text-slate-700 font-medium leading-relaxed">{{ modalDetalle.descripcion }}</p>
                         </div>
 
                         <div v-if="modalDetalle.datos_antes">
-                            <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-400">Datos previos (Antes)</span>
-                            <pre class="overflow-x-auto rounded-xl bg-slate-900 p-3 font-mono text-[11px] text-slate-100">{{ JSON.stringify(modalDetalle.datos_antes, null, 2) }}</pre>
+                            <span class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Datos previos (Antes)</span>
+                            <pre class="overflow-x-auto rounded-xl bg-slate-900 p-3.5 font-mono text-[11px] text-slate-100 shadow-inner leading-normal">{{ JSON.stringify(modalDetalle.datos_antes, null, 2) }}</pre>
                         </div>
 
                         <div v-if="modalDetalle.datos_despues">
-                            <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-400">Datos registrados (Después)</span>
-                            <pre class="overflow-x-auto rounded-xl bg-slate-900 p-3 font-mono text-[11px] text-slate-100">{{ JSON.stringify(modalDetalle.datos_despues, null, 2) }}</pre>
+                            <span class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Datos registrados (Después)</span>
+                            <pre class="overflow-x-auto rounded-xl bg-slate-900 p-3.5 font-mono text-[11px] text-slate-100 shadow-inner leading-normal">{{ JSON.stringify(modalDetalle.datos_despues, null, 2) }}</pre>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-[11px] text-slate-600 sm:grid-cols-2">
-                            <div><span class="font-bold text-slate-800">IP:</span> {{ modalDetalle.ip || 'No registrada' }}</div>
-                            <div><span class="font-bold text-slate-800">Actor:</span> {{ modalDetalle.actor_nombre }} ({{ modalDetalle.actor_email || modalDetalle.actor_tipo }})</div>
+                        <div class="grid grid-cols-1 gap-2.5 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 text-[11px] text-slate-600 sm:grid-cols-2">
+                            <div><strong class="font-bold text-slate-800">IP:</strong> <span class="font-mono text-slate-700">{{ modalDetalle.ip || 'No registrada' }}</span></div>
+                            <div><strong class="font-bold text-slate-800">Actor:</strong> <span class="text-slate-700">{{ modalDetalle.actor_nombre }} ({{ modalDetalle.actor_email || modalDetalle.actor_tipo }})</span></div>
                         </div>
                     </div>
 
-                    <div class="flex justify-end border-t border-slate-100 pt-3">
+                    <div class="flex items-center justify-end border-t border-slate-100 bg-slate-50/50 px-6 py-4">
                         <button
                             type="button"
                             @click="modalDetalle = null"
-                            class="cursor-pointer rounded-xl px-4 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
+                            class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
                         >
                             Cerrar
                         </button>

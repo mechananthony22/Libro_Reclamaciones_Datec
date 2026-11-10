@@ -65,6 +65,10 @@ function copiarCodigoHtml() {
         copiadoHtml.value = false;
     }, 2500);
 }
+
+const claseEtiqueta = 'mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500';
+const claseCampo =
+    'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
 </script>
 
 <template>
@@ -72,97 +76,115 @@ function copiarCodigoHtml() {
         <Head title="Identidad Legal y Fiscal - Datec Libro" />
 
         <div class="mx-auto max-w-5xl space-y-6">
-            <!-- Encabezado -->
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="rounded-md bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800">RF-008</span>
-                        <h1 class="text-2xl font-bold tracking-tight text-slate-900">
-                            Configurar Identidad Legal y Fiscal
-                        </h1>
+            <!-- Cabecera de Página (Estilo Admin/Empresas) -->
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div class="flex items-start gap-4">
+                    <div
+                        class="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/25"
+                    >
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
                     </div>
-                    <p class="mt-1 text-sm text-slate-500">
-                        Registro oficial de Razón Social, RUC, domicilio legal y contactos requeridos por INDECOPI para la validez del Libro de Reclamaciones.
-                    </p>
+                    <div>
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                            Configuración de Empresa · Normativa INDECOPI
+                        </div>
+                        <h1 class="mt-0.5 text-2xl font-extrabold tracking-tight text-slate-900">
+                            Identidad Legal y Fiscal
+                        </h1>
+                        <p class="mt-1 text-sm text-slate-500">
+                            Registro oficial de Razón Social, RUC, domicilio legal y contactos requeridos por ley para la validez de tu Libro de Reclamaciones.
+                        </p>
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-2">
                     <a
                         :href="urlPublica"
                         target="_blank"
-                        class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition"
+                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900"
                     >
                         <span>Ver Libro Público</span>
-                        <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
                     </a>
                 </div>
             </div>
 
-            <!-- Tabs de configuración de empresa -->
-            <nav class="flex border-b border-slate-200 gap-6 text-sm font-medium">
+            <!-- Pestañas de Navegación de Configuración -->
+            <div class="flex gap-1 overflow-x-auto rounded-xl bg-slate-100/80 p-1 shadow-2xs">
                 <Link
                     href="/configuracion/empresa"
-                    class="border-b-2 border-blue-600 pb-3 text-blue-600 font-semibold"
+                    class="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition"
                 >
-                    Identidad Legal (RF-008)
+                    Identidad Legal
                 </Link>
                 <Link
                     href="/configuracion/personalizacion"
-                    class="border-b-2 border-transparent pb-3 text-slate-500 hover:border-slate-300 hover:text-slate-700"
+                    class="rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition"
                 >
-                    Personalización Visual (RF-009)
+                    Logo y Colores
                 </Link>
                 <Link
                     href="/configuracion/establecimientos"
-                    class="border-b-2 border-transparent pb-3 text-slate-500 hover:border-slate-300 hover:text-slate-700"
+                    class="rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition"
                 >
-                    Establecimientos y Sedes (RF-010)
+                    Establecimientos / Sedes
                 </Link>
-            </nav>
+            </div>
 
-            <!-- CHECKLIST DE CUMPLIMIENTO LEGAL (CRITERIO DE ACEPTACIÓN RF-008) -->
+            <!-- Checklist de Cumplimiento Legal -->
             <div
-                class="rounded-2xl border p-5 shadow-xs transition"
-                :class="tieneMinimos ? 'border-emerald-200 bg-emerald-50/40' : 'border-amber-200 bg-amber-50/40'"
+                :class="[
+                    'space-y-4 rounded-2xl border p-6 shadow-2xs transition',
+                    tieneMinimos
+                        ? 'border-emerald-200 bg-emerald-50/40'
+                        : 'border-amber-200 bg-amber-50/40'
+                ]"
             >
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-3" :class="tieneMinimos ? 'border-emerald-200' : 'border-amber-200'">
-                    <div class="flex items-center gap-2.5">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-4" :class="tieneMinimos ? 'border-emerald-200' : 'border-amber-200'">
+                    <div class="flex items-center gap-3">
                         <span
-                            class="flex h-8 w-8 items-center justify-center rounded-xl font-bold text-sm"
-                            :class="tieneMinimos ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-900'"
+                            :class="[
+                                'flex h-9 w-9 items-center justify-center rounded-xl font-bold text-sm shadow-2xs',
+                                tieneMinimos ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-900'
+                            ]"
                         >
                             {{ tieneMinimos ? '✓' : '!' }}
                         </span>
                         <div>
-                            <h3 class="text-sm font-bold" :class="tieneMinimos ? 'text-emerald-900' : 'text-amber-950'">
-                                {{ tieneMinimos ? 'Requisitos Legales Mínimos Completos' : 'Requisitos Legales Incompletos (RN-002)' }}
-                            </h3>
+                            <h2 class="text-sm font-bold" :class="tieneMinimos ? 'text-emerald-950' : 'text-amber-950'">
+                                {{ tieneMinimos ? 'Requisitos Legales Mínimos Completos' : 'Requisitos Legales Mínimos Pendientes' }}
+                            </h2>
                             <p class="text-xs" :class="tieneMinimos ? 'text-emerald-700' : 'text-amber-800'">
-                                {{ tieneMinimos ? 'La empresa cuenta con los datos exigidos por ley para operar su Libro de Reclamaciones.' : 'Criterio de aceptación RF-008: Sin estos datos completos, no se podrá activar el formulario público.' }}
+                                {{ tieneMinimos ? 'Tu empresa cuenta con toda la información fiscal exigida por INDECOPI para operar válidamente.' : 'Debes completar los datos señalados abajo para que tu Libro esté 100% habilitado.' }}
                             </p>
                         </div>
                     </div>
 
                     <span
-                        class="self-start sm:self-auto rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider border"
-                        :class="empresa.estado === 'activa' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-slate-100 text-slate-700 border-slate-300'"
+                        :class="[
+                            'inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider',
+                            empresa.estado === 'activa' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
+                        ]"
                     >
-                        Estado: {{ empresa.estado }}
+                        <span :class="['h-2 w-2 rounded-full', empresa.estado === 'activa' ? 'bg-emerald-500' : 'bg-slate-400']"></span>
+                        <span>Estado: {{ empresa.estado }}</span>
                     </span>
                 </div>
 
                 <!-- Lista de verificación -->
-                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                     <div
                         v-for="(item, key) in checklist"
                         :key="key"
-                        class="rounded-xl bg-white p-3 border shadow-2xs flex flex-col justify-between"
+                        class="rounded-xl bg-white p-3.5 border shadow-2xs flex flex-col justify-between transition hover:shadow-xs"
                         :class="item.cumplido ? 'border-emerald-200' : 'border-amber-200'"
                     >
                         <div>
-                            <div class="flex items-center gap-1.5 font-semibold" :class="item.cumplido ? 'text-emerald-800' : 'text-amber-800'">
+                            <div class="flex items-center gap-1.5 font-bold" :class="item.cumplido ? 'text-emerald-800' : 'text-amber-800'">
                                 <svg v-if="item.cumplido" class="h-4 w-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
@@ -171,7 +193,7 @@ function copiarCodigoHtml() {
                                 </svg>
                                 <span>{{ item.titulo }}</span>
                             </div>
-                            <p class="mt-1 text-[11px] text-slate-500 line-clamp-1">
+                            <p class="mt-1 text-[11px] text-slate-500">
                                 {{ item.detalle }}
                             </p>
                         </div>
@@ -179,150 +201,164 @@ function copiarCodigoHtml() {
                 </div>
             </div>
 
-            <!-- FORMULARIO DE IDENTIDAD LEGAL (RF-008) -->
+            <!-- Formulario de Identidad Legal -->
             <form @submit.prevent="submit" class="space-y-6">
-                <!-- SECCIÓN 1: DATOS FISCALES DEL PROVEEDOR -->
-                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
-                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">1</span>
-                        Datos Fiscales y Domicilio Legal
-                    </h2>
+                <!-- Sección 1: Datos Fiscales del Proveedor -->
+                <div class="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs">
+                    <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-900">Datos Fiscales y Domicilio Legal</h2>
+                            <p class="text-xs text-slate-500">Información tributaria y de contacto visible al consumidor en la cabecera del libro.</p>
+                        </div>
+                    </div>
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Nombre Comercial / Fantasía *</label>
+                            <label :class="claseEtiqueta">Nombre Comercial / Nombre de Fantasía *</label>
                             <input
                                 v-model="form.name"
                                 type="text"
                                 required
                                 placeholder="Ej. Tienda ABC"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                :class="claseCampo"
                             />
-                            <div v-if="form.errors.name" class="mt-1 text-xs text-rose-600">{{ form.errors.name }}</div>
+                            <p v-if="form.errors.name" class="mt-1 text-[11px] text-rose-600 font-semibold">{{ form.errors.name }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Razón Social Registrada *</label>
+                            <label :class="claseEtiqueta">Razón Social Registrada *</label>
                             <input
                                 v-model="form.razon_social"
                                 type="text"
                                 required
                                 placeholder="Ej. ABC COMERCIALIZADORA S.A.C."
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                :class="claseCampo"
                             />
-                            <div v-if="form.errors.razon_social" class="mt-1 text-xs text-rose-600">{{ form.errors.razon_social }}</div>
+                            <p v-if="form.errors.razon_social" class="mt-1 text-[11px] text-rose-600 font-semibold">{{ form.errors.razon_social }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Número de RUC (11 dígitos) *</label>
+                            <label :class="claseEtiqueta">Número de RUC (11 dígitos) *</label>
                             <input
                                 v-model="form.ruc"
                                 type="text"
                                 maxlength="11"
                                 required
                                 placeholder="20123456789"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm font-mono focus:border-blue-500 focus:outline-hidden"
+                                :class="[claseCampo, 'font-mono']"
                             />
-                            <p class="mt-1 text-[11px] text-slate-500">SUNAT: Debe iniciar con 10 o 20.</p>
-                            <div v-if="form.errors.ruc" class="mt-1 text-xs text-rose-600">{{ form.errors.ruc }}</div>
+                            <p class="mt-1 text-[11px] text-slate-400">SUNAT: Debe iniciar con 10 o 20.</p>
+                            <p v-if="form.errors.ruc" class="mt-1 text-[11px] text-rose-600 font-semibold">{{ form.errors.ruc }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Correo Electrónico para Reclamaciones *</label>
+                            <label :class="claseEtiqueta">Correo Electrónico para Reclamaciones *</label>
                             <input
                                 v-model="form.email"
                                 type="email"
                                 required
                                 placeholder="libro.reclamaciones@tiendaabc.pe"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                :class="claseCampo"
                             />
-                            <p class="mt-1 text-[11px] text-slate-500">Recibirá las constancias de cada nuevo registro presentado.</p>
-                            <div v-if="form.errors.email" class="mt-1 text-xs text-rose-600">{{ form.errors.email }}</div>
+                            <p class="mt-1 text-[11px] text-slate-400">Recibirá copia de las constancias emitidas por cada reclamo.</p>
+                            <p v-if="form.errors.email" class="mt-1 text-[11px] text-rose-600 font-semibold">{{ form.errors.email }}</p>
                         </div>
 
                         <div class="sm:col-span-2">
-                            <label class="block text-xs font-semibold text-slate-700">Domicilio Fiscal / Legal Completo *</label>
+                            <label :class="claseEtiqueta">Domicilio Fiscal / Legal Completo *</label>
                             <input
                                 v-model="form.direccion"
                                 type="text"
                                 required
                                 placeholder="Av. República de Panamá 3456, San Isidro, Lima - Perú"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                :class="claseCampo"
                             />
-                            <div v-if="form.errors.direccion" class="mt-1 text-xs text-rose-600">{{ form.errors.direccion }}</div>
+                            <p v-if="form.errors.direccion" class="mt-1 text-[11px] text-rose-600 font-semibold">{{ form.errors.direccion }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Teléfono Oficial de Contacto</label>
+                            <label :class="claseEtiqueta">Teléfono Oficial de Contacto</label>
                             <input
                                 v-model="form.telefono"
                                 type="text"
                                 placeholder="+51 987654321"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                :class="claseCampo"
                             />
                         </div>
                     </div>
                 </div>
 
-                <!-- SECCIÓN 2: REPRESENTANTE OPERATIVO -->
-                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
-                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">2</span>
-                        Representante Operativo del Libro
-                    </h2>
+                <!-- Sección 2: Representante Operativo -->
+                <div class="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs">
+                    <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-900">Representante Legal u Operativo</h2>
+                            <p class="text-xs text-slate-500">Persona natural encargada de la atención o representación del libro ante la autoridad.</p>
+                        </div>
+                    </div>
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Nombre del Responsable</label>
+                            <label :class="claseEtiqueta">Nombre del Responsable</label>
                             <input
                                 v-model="form.representante_nombre"
                                 type="text"
                                 placeholder="María González"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                :class="claseCampo"
                             />
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Correo Electrónico</label>
+                            <label :class="claseEtiqueta">Correo Electrónico</label>
                             <input
                                 v-model="form.representante_email"
                                 type="email"
                                 placeholder="maria.gonzalez@tiendaabc.pe"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                :class="claseCampo"
                             />
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700">Teléfono Móvil</label>
+                            <label :class="claseEtiqueta">Teléfono Móvil</label>
                             <input
                                 v-model="form.representante_telefono"
                                 type="text"
                                 placeholder="+51 912345678"
-                                class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
+                                :class="claseCampo"
                             />
                         </div>
                     </div>
                 </div>
 
-                <!-- SECCIÓN 3: ACTIVACIÓN PÚBLICA (CRITERIO DE ACEPTACIÓN RF-008) -->
-                <div v-if="empresa.estado !== 'activa'" class="rounded-2xl border border-blue-200 bg-blue-50/50 p-5 shadow-xs">
+                <!-- Sección 3: Activación Pública -->
+                <div v-if="empresa.estado !== 'activa'" class="rounded-2xl border border-blue-200/80 bg-blue-50/50 p-5 shadow-2xs">
                     <div class="flex items-start gap-3">
                         <input
                             id="activar-check"
                             v-model="form.solicitar_activacion"
                             type="checkbox"
-                            class="h-4 w-4 mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            class="h-4 w-4 mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                         />
                         <div>
-                            <label for="activar-check" class="text-sm font-bold text-blue-950 cursor-pointer">
+                            <label for="activar-check" class="text-xs font-bold text-blue-950 cursor-pointer">
                                 Solicitar activación y publicación inmediata del Libro de Reclamaciones
                             </label>
-                            <p class="text-xs text-blue-800 mt-0.5">
+                            <p class="text-[11px] text-blue-800 mt-0.5">
                                 Al marcar esta opción, el sistema verificará que los datos legales mínimos estén completos y cambiará el estado de la empresa a <strong>Activa</strong> para permitir registros de consumidores en <code class="font-mono text-blue-900">/l/{{ empresa.slug }}</code>.
                             </p>
-                            <div v-if="form.errors.solicitar_activacion" class="mt-1 text-xs text-rose-600 font-semibold">
+                            <p v-if="form.errors.solicitar_activacion" class="mt-1 text-xs text-rose-600 font-semibold">
                                 {{ form.errors.solicitar_activacion }}
-                            </div>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -331,29 +367,36 @@ function copiarCodigoHtml() {
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50 transition"
+                        class="cursor-pointer rounded-xl bg-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 disabled:opacity-50"
                     >
                         {{ form.processing ? 'Guardando configuración...' : 'Guardar Identidad Legal' }}
                     </button>
                 </div>
             </form>
 
-            <!-- SECCIÓN 4: CÓDIGO DE INTEGRACIÓN PARA E-COMMERCE -->
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <div>
-                        <h2 class="text-base font-bold text-slate-900">
-                            Enlace y Botón Oficial para tu Tienda Virtual
-                        </h2>
-                        <p class="text-xs text-slate-500 mt-0.5">
-                            Copia este enlace o código HTML para colocarlo visible en el pie de página (footer) de tu sitio web según exige INDECOPI.
-                        </p>
+            <!-- Sección 4: Enlace y Botón Oficial para Tienda Virtual -->
+            <div class="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-900">
+                                Enlace y Botón Oficial para tu Sitio Web o Tienda
+                            </h2>
+                            <p class="text-xs text-slate-500">
+                                Coloca este código en el pie de página (footer) de tu sitio web según exige INDECOPI.
+                            </p>
+                        </div>
                     </div>
 
                     <button
                         type="button"
                         @click="copiarCodigoHtml"
-                        class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50"
                     >
                         <svg v-if="!copiadoHtml" class="h-3.5 w-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -361,15 +404,14 @@ function copiarCodigoHtml() {
                         <svg v-else class="h-3.5 w-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        <span>{{ copiadoHtml ? '¡Copiado!' : 'Copiar HTML' }}</span>
+                        <span>{{ copiadoHtml ? '¡Copiado!' : 'Copiar Código' }}</span>
                     </button>
                 </div>
 
-                <div class="rounded-xl bg-slate-900 p-4 text-xs font-mono text-slate-200 overflow-x-auto">
+                <div class="rounded-xl bg-slate-900 p-4 text-xs font-mono text-slate-200 overflow-x-auto shadow-inner">
                     <code>{{ codigoHtml }}</code>
                 </div>
             </div>
         </div>
     </AdminLayout>
 </template>
-

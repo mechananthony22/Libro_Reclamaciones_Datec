@@ -21,7 +21,7 @@ const form = useForm({
     representante_email: '',
     representante_telefono: '',
     color_primario: '#2563EB',
-    plan: 'basico',
+    plan: 'corporativo',
     estado: 'borrador',
     vigencia_desde: new Date().toISOString().split('T')[0],
     vigencia_hasta: '',
@@ -240,10 +240,19 @@ const claseCampo =
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label :class="claseEtiqueta">Plan Asignado *</label>
-                            <select v-model="form.plan" :class="[claseCampo, 'cursor-pointer font-semibold']">
-                                <option v-for="p in planes" :key="p.value" :value="p.value">{{ p.label }}</option>
-                            </select>
+                            <label :class="claseEtiqueta">Plan Asignado</label>
+                            <div class="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50/60 px-3.5 py-2 text-xs font-bold text-blue-900 shadow-2xs">
+                                <div class="flex items-center gap-2">
+                                    <svg class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                    </svg>
+                                    <span>Plan Corporativo / E-Commerce</span>
+                                </div>
+                                <span class="rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
+                                    Full Activo
+                                </span>
+                            </div>
+                            <p class="mt-1 text-[11px] text-slate-400">Acceso completo a libro virtual, auditoría y alertas.</p>
                         </div>
 
                         <div>

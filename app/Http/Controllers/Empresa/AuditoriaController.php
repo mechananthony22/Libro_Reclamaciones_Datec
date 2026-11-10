@@ -25,6 +25,7 @@ class AuditoriaController extends Controller
         $empresa = Empresa::current();
 
         $query = AuditoriaLog::where('empresa_id', $empresa->id)
+            ->where('actor_tipo', '!=', 'superadmin')
             ->with(['user:id,name,email'])
             ->orderBy('created_at', 'desc');
 

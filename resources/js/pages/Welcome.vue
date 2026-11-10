@@ -28,19 +28,25 @@ const rutaDestino = computed(() => {
         <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100">
             <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
                 <!-- Logotipo de la Marca -->
-                <div class="flex items-center gap-2.5">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
-                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
-                            <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
-                            <path d="M9 12H4s.55-3.03 2-4.5c1.62-1.63 5-1.5 5-1.5"/>
-                            <path d="M15 15v5s3.03-.55 4.5-2c1.63-1.62 1.5-5 1.5-5"/>
-                        </svg>
+                <Link href="/" class="flex items-center gap-2.5">
+                    <img
+                        src="/logoDLR.png"
+                        alt="DatecLibro"
+                        class="h-10 w-auto max-w-[160px] object-contain"
+                        onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';"
+                    />
+                    <div class="hidden items-center gap-2.5">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+                                <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xl font-extrabold tracking-tight text-slate-900">
+                            Datec<span class="text-blue-600">Libro</span>
+                        </span>
                     </div>
-                    <span class="text-xl font-extrabold tracking-tight text-slate-900">
-                        Datec<span class="text-blue-600">Libro</span>
-                    </span>
-                </div>
+                </Link>
 
                 <!-- Enlaces de Navegación Centrales -->
                 <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">

@@ -100,6 +100,15 @@ class EmpresaController extends Controller
 
         $empresa = Empresa::create($datos);
 
+        // Crear automáticamente la Sede Principal con la dirección legal registrada
+        $empresa->establecimientos()->create([
+            'codigo' => 'SEDE-01',
+            'nombre' => 'Sede Principal',
+            'direccion' => $empresa->direccion ?: 'Sede Central',
+            'es_principal' => true,
+            'activo' => true,
+        ]);
+
         app(AuditoriaService::class)->registrar(
             'empresa_creada',
             'empresas',

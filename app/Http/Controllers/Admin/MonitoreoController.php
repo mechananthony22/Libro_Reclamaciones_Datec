@@ -43,24 +43,24 @@ class MonitoreoController extends Controller
             ];
         }
 
-        // 2. Suscripciones y vencimientos 
+        // 2. Suscripciones y vencimientos
         $suscripcionesPorVencer = Empresa::query()
             ->whereNotNull('vigencia_hasta')
             ->whereBetween('vigencia_hasta', [$hoy, $en30Dias])
             ->orderBy('vigencia_hasta')
-            ->get(['id', 'name', 'slug', 'plan', 'vigencia_hasta', 'estado']);
+            ->get(['id', 'name', 'slug', 'plan', 'vigencia_hasta', 'estado', 'color_primario', 'logo_path']);
 
         $suscripcionesVencidas = Empresa::query()
             ->whereNotNull('vigencia_hasta')
             ->where('vigencia_hasta', '<', $hoy)
             ->orderBy('vigencia_hasta', 'desc')
-            ->get(['id', 'name', 'slug', 'plan', 'vigencia_hasta', 'estado']);
+            ->get(['id', 'name', 'slug', 'plan', 'vigencia_hasta', 'estado', 'color_primario', 'logo_path']);
 
         // 3. Colas y envíos asíncronos (PostgreSQL database driver)
         $jobsPendientes = DB::table('jobs')->count();
         $jobsFallidos = DB::table('failed_jobs')->count();
 
-        // Obtener últimos 10 fallos sanitizados 
+        // Obtener últimos 10 fallos sanitizados
         $ultimosFallosRaw = DB::table('failed_jobs')
             ->latest('failed_at')
             ->limit(10)
@@ -92,7 +92,7 @@ class MonitoreoController extends Controller
             ];
         });
 
-        // 4. Métricas de invitaciones 
+        // 4. Métricas de invitaciones
         $invitaciones = [
             'total' => InvitacionEmpresa::count(),
             'pendientes' => InvitacionEmpresa::whereNull('accepted_at')->where('expires_at', '>', now())->count(),
