@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\VerificarSaludPlataformaCommand;
 use App\Console\Commands\VerificarVencimientosReclamacionesCommand;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -21,4 +22,9 @@ Artisan::command('inspire', function () {
 Schedule::command(VerificarVencimientosReclamacionesCommand::class)
     ->dailyAt('08:00')
     ->timezone('America/Lima')
+    ->withoutOverlapping();
+
+// Supervisión periódica de salud, tareas en cola y fallos de mensajería (alertas operativas a Datec)
+Schedule::command(VerificarSaludPlataformaCommand::class)
+    ->everyFifteenMinutes()
     ->withoutOverlapping();

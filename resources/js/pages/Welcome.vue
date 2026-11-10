@@ -46,7 +46,6 @@ const rutaDestino = computed(() => {
                 <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
                     <a href="#caracteristicas" class="hover:text-blue-600 transition">Funcionalidades</a>
                     <a href="#soluciones" class="hover:text-blue-600 transition">Soluciones</a>
-                    <a href="#casos-exito" class="hover:text-blue-600 transition">Casos de Éxito</a>
                     <a href="#plataforma" class="hover:text-blue-600 transition">Plataforma</a>
                 </nav>
 
@@ -147,103 +146,174 @@ const rutaDestino = computed(() => {
                         </div>
                     </div>
 
-                    <!-- Columna Derecha: Mockups Estilo SmartWing (Móvil y Dashboard Web) -->
+                    <!-- Columna Derecha: Mockups Estilo SmartWing (Móvil y Dashboard Real) -->
                     <div class="lg:col-span-6 relative flex justify-center items-center">
-                        <!-- Tarjeta de Dashboard Web (Fondo Superpuesto) -->
-                        <div class="w-full max-w-xl rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xl shadow-blue-900/10 transition">
+                        <!-- Tarjeta de Dashboard Web (Fondo Superpuesto - Fiel al Panel Real) -->
+                        <div class="w-full max-w-xl rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xl shadow-blue-900/10 transition">
                             <!-- Barra Superior de Navegador con Botones de Ventana -->
-                            <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
                                 <div class="flex items-center gap-1.5">
                                     <span class="h-2.5 w-2.5 rounded-full bg-rose-400"></span>
                                     <span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
                                     <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
                                 </div>
-                                <div class="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                                <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
                                     <span class="text-blue-600 font-extrabold">✦</span>
-                                    <span>DatecLibro OS</span>
-                                </div>
-                                <div class="w-8"></div>
-                            </div>
-
-                            <!-- Cabecera de la Aplicación -->
-                            <div class="text-center py-2 space-y-1">
-                                <h3 class="text-lg font-bold text-slate-900">
-                                    ¿Cómo podemos <span class="text-blue-600">atenderte</span> hoy?
-                                </h3>
-                                <p class="text-xs text-slate-500 max-w-xs mx-auto">
-                                    Automatiza procesos, registra reclamos en segundos y entrega respuestas dentro del plazo legal.
-                                </p>
-                            </div>
-
-                            <!-- Cuadrícula de 4 Tarjetas de Módulos (Exacto a SmartWing) -->
-                            <div class="grid grid-cols-2 gap-2.5 py-4">
-                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 hover:border-blue-400 hover:bg-blue-50/30 transition cursor-pointer">
-                                    <span class="text-xs font-bold text-slate-800 block">Gestión de Reclamos</span>
-                                    <span class="text-[10px] text-slate-500 mt-0.5 block">Revisa expedientes y respuestas</span>
-                                </div>
-
-                                <div class="rounded-xl border border-blue-300 bg-blue-50/50 p-3 relative cursor-pointer">
-                                    <span class="absolute -top-2 right-2 rounded-full bg-blue-600 px-2 py-0.5 text-[9px] font-extrabold text-white uppercase tracking-wider">
-                                        Popular
+                                    <span>DatecLibro • Panel de Control</span>
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        En vivo
                                     </span>
-                                    <span class="text-xs font-bold text-blue-900 block">Multisede & Locales</span>
-                                    <span class="text-[10px] text-blue-700/80 mt-0.5 block">Control de sucursales físicas</span>
                                 </div>
+                                <span class="text-[10px] font-semibold text-slate-400">Últimos 30 días</span>
+                            </div>
 
-                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 hover:border-blue-400 hover:bg-blue-50/30 transition cursor-pointer">
-                                    <span class="text-xs font-bold text-slate-800 block">Hojas Oficiales</span>
-                                    <span class="text-[10px] text-slate-500 mt-0.5 block">Correlativos y formato Indecopi</span>
+                            <!-- Mini Cabecera con datos de la empresa y filtros -->
+                            <div class="flex items-center justify-between py-1 border-b border-slate-50 mb-3 text-xs">
+                                <div>
+                                    <div class="font-extrabold text-slate-900 text-xs">Inversiones Retail Datec S.A.C.</div>
+                                    <div class="text-[10px] text-slate-400 font-mono">RUC: 20608912345 &bull; 3 Sedes Activas</div>
                                 </div>
-
-                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 hover:border-blue-400 hover:bg-blue-50/30 transition cursor-pointer">
-                                    <span class="text-xs font-bold text-slate-800 block">Control de 15 Días</span>
-                                    <span class="text-[10px] text-slate-500 mt-0.5 block">Alertas automáticas de plazos</span>
+                                <div class="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold text-slate-600">
+                                    <span class="bg-white text-blue-600 px-2 py-0.5 rounded-md shadow-2xs">30 Días</span>
+                                    <span class="px-2 py-0.5 text-slate-500">Año 2026</span>
                                 </div>
                             </div>
 
-                            <!-- Simulación de Barra de Búsqueda / Entrada -->
-                            <div class="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-xs flex items-center justify-between text-xs text-slate-400">
-                                <div class="flex items-center gap-2">
-                                    <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                    <span>Buscar por N° de hoja, DNI o cliente...</span>
+                            <!-- Cuadrícula de 4 Métricas Reales Clave (KPIs) -->
+                            <div class="grid grid-cols-4 gap-2 mb-3">
+                                <div class="rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5 text-left">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-slate-500 block">Reclamos</span>
+                                    <div class="text-lg font-black text-slate-900 leading-tight mt-0.5">24</div>
+                                    <span class="text-[9px] font-semibold text-emerald-600">100% legales</span>
                                 </div>
-                                <span class="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-mono text-slate-500">⌘K</span>
+
+                                <div class="rounded-xl border border-blue-200/80 bg-blue-50/50 p-2.5 text-left">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-blue-700 block">En Trámite</span>
+                                    <div class="text-lg font-black text-blue-900 leading-tight mt-0.5">5</div>
+                                    <span class="text-[9px] font-medium text-blue-600">En revisión</span>
+                                </div>
+
+                                <div class="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-2.5 text-left">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-700 block">Atendidos</span>
+                                    <div class="text-lg font-black text-emerald-900 leading-tight mt-0.5">19</div>
+                                    <span class="text-[9px] font-bold text-emerald-700">95% resueltos</span>
+                                </div>
+
+                                <div class="rounded-xl border border-indigo-200/80 bg-indigo-50/50 p-2.5 text-left">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-indigo-700 block">Promedio</span>
+                                    <div class="text-lg font-black text-indigo-900 leading-tight mt-0.5">4.2d</div>
+                                    <span class="text-[9px] font-semibold text-indigo-600">Plazo máx. 15d</span>
+                                </div>
+                            </div>
+
+                            <!-- Semáforo Legal de Vencimientos (Ley 29571) -->
+                            <div class="rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 mb-3">
+                                <div class="flex items-center justify-between text-[10px] mb-1.5">
+                                    <div class="flex items-center gap-1.5 font-bold text-slate-700">
+                                        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                                        <span>Semáforo Legal de Vencimientos</span>
+                                    </div>
+                                    <span class="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">100% dentro de plazo</span>
+                                </div>
+                                <div class="flex h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                                    <div class="bg-emerald-500 w-[82%]" title="En Plazo (18)"></div>
+                                    <div class="bg-amber-400 w-[14%]" title="Próximos (1)"></div>
+                                    <div class="bg-rose-500 w-[4%]" title="Vencidos (0)"></div>
+                                </div>
+                                <div class="flex justify-between items-center text-[9px] text-slate-500 mt-1">
+                                    <span class="text-emerald-700 font-semibold">&bull; 18 En plazo (&gt;3d)</span>
+                                    <span class="text-amber-700 font-semibold">&bull; 1 Próximo</span>
+                                    <span class="text-slate-400">&bull; 0 Vencidos</span>
+                                </div>
+                            </div>
+
+                            <!-- Mini Tabla de Últimos Expedientes Registrados -->
+                            <div class="rounded-xl border border-slate-200/80 bg-white overflow-hidden text-[11px]">
+                                <div class="bg-slate-50 px-3 py-1.5 border-b border-slate-100 flex items-center justify-between font-bold text-slate-600 text-[10px] uppercase">
+                                    <span>Últimos Reclamos Oficiales</span>
+                                    <span class="text-blue-600 font-semibold">Ver expedientes &rarr;</span>
+                                </div>
+                                <div class="divide-y divide-slate-100 text-[10px]">
+                                    <div class="px-3 py-2 flex items-center justify-between hover:bg-slate-50/50">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-mono font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">REC-000142</span>
+                                            <span class="text-slate-600 font-medium truncate max-w-[120px]">María Fernández G.</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[9px] text-slate-400">Sede San Isidro</span>
+                                            <span class="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-bold text-blue-700 border border-blue-200">
+                                                En trámite &bull; 8d
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="px-3 py-2 flex items-center justify-between hover:bg-slate-50/50">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-mono font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">QUE-000141</span>
+                                            <span class="text-slate-600 font-medium truncate max-w-[120px]">Carlos Mendoza R.</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[9px] text-slate-400">Tienda Virtual</span>
+                                            <span class="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200">
+                                                Resuelto
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Mockup Móvil Flotante en Primer Plano (Look iPhone SmartWing) -->
-                        <div class="hidden sm:block absolute -left-6 bottom-4 w-52 rounded-[32px] border-[5px] border-slate-900 bg-white p-3 shadow-2xl shadow-slate-900/25">
+                        <!-- Mockup Móvil Flotante en Primer Plano (Look iPhone Consumidor) -->
+                        <div class="hidden sm:block absolute -left-7 -bottom-6 w-56 rounded-[32px] border-[5px] border-slate-900 bg-white p-3 shadow-2xl shadow-slate-900/30">
                             <!-- Muesca Superior del Teléfono -->
                             <div class="flex justify-center pb-2">
                                 <span class="h-3 w-16 rounded-full bg-slate-900"></span>
                             </div>
 
-                            <!-- Pantalla del Asistente Virtual -->
-                            <div class="space-y-3 py-1">
-                                <div class="flex items-center justify-center">
-                                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/30">
-                                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <!-- Pantalla del Libro Virtual del Consumidor -->
+                            <div class="space-y-2 py-1 text-center">
+                                <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[9px] font-bold text-blue-700">
+                                    Vista del Consumidor
+                                </span>
+
+                                <div class="flex items-center justify-center pt-1">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
                                     </div>
                                 </div>
 
-                                <div class="text-center">
-                                    <span class="text-[11px] font-bold text-slate-900 block">Libro Virtual Móvil</span>
-                                    <p class="text-[9px] text-slate-500 leading-tight mt-0.5">
-                                        Acceso público sin necesidad de iniciar sesión.
+                                <div class="text-center px-1">
+                                    <span class="text-[11px] font-extrabold text-slate-900 block leading-tight">Libro de Reclamaciones</span>
+                                    <span class="text-[9px] text-slate-400 font-mono">Hoja N° 000142-2026</span>
+                                </div>
+
+                                <div class="rounded-xl border border-emerald-200 bg-emerald-50/80 p-2 text-left space-y-1">
+                                    <div class="flex items-center gap-1 text-[9px] font-bold text-emerald-800">
+                                        <svg class="h-3 w-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>¡Reclamo Registrado!</span>
+                                    </div>
+                                    <p class="text-[8px] text-emerald-700 leading-tight">
+                                        Copia oficial en PDF enviada al correo del consumidor.
                                     </p>
                                 </div>
 
-                                <div class="rounded-lg bg-blue-50 p-2 text-[9px] text-blue-900 border border-blue-100 text-center font-medium">
-                                    Hoja N° 000124 generada exitosamente.
-                                </div>
-
-                                <div class="space-y-1.5 pt-1">
-                                    <div class="h-2 w-full rounded bg-slate-100"></div>
-                                    <div class="h-2 w-3/4 rounded bg-slate-100"></div>
+                                <div class="flex items-center justify-center gap-2 p-1.5 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div class="h-7 w-7 bg-slate-900 rounded p-0.5 flex items-center justify-center">
+                                        <div class="h-5 w-5 bg-white grid grid-cols-2 gap-0.5 p-0.5">
+                                            <div class="bg-black"></div>
+                                            <div class="bg-black"></div>
+                                            <div class="bg-black"></div>
+                                            <div class="bg-transparent"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-left">
+                                        <div class="text-[8px] font-bold text-slate-700">Consulta de Estado</div>
+                                        <div class="text-[7px] text-slate-400">Seguimiento con DNI</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -262,48 +332,27 @@ const rutaDestino = computed(() => {
                 <!-- Cuadrícula de Marcas en Tarjetas Limpias -->
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-7 text-xs font-bold text-slate-700">
                     <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Microsoft</span>
+                        <span>COMERCIO 01</span>
                     </div>
                     <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>eBay</span>
+                        <span>COMERCIO 02</span>
                     </div>
                     <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Stripe</span>
+                        <span>COMERCIO 03</span>
                     </div>
                     <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Netflix</span>
+                        <span>COMERCIO 04</span>
                     </div>
                     <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Princess</span>
-                    </div>
-                    <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Intel</span>
-                    </div>
-                    <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Slack</span>
+                        <span>COMERCIO 05</span>
                     </div>
 
                     <!-- Fila 2 -->
                     <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>CPQO</span>
+                        <span>COMERCIO 06</span>
                     </div>
                     <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Shopify</span>
-                    </div>
-                    <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Cisco</span>
-                    </div>
-                    <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Lowe's</span>
-                    </div>
-                    <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Google</span>
-                    </div>
-                    <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>Datadog</span>
-                    </div>
-                    <div class="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50 py-3.5 px-4 shadow-xs">
-                        <span>L'Oréal</span>
+                        <span>COMERCIO 07</span>
                     </div>
                 </div>
             </div>
@@ -331,9 +380,9 @@ const rutaDestino = computed(() => {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                             </svg>
                         </div>
-                        <h3 class="text-lg font-bold text-slate-900">Enlace Oficial y Código Embed</h3>
+                        <h3 class="text-lg font-bold text-slate-900">Botón Oficial para tu Tienda o Web</h3>
                         <p class="text-xs text-slate-600 leading-relaxed">
-                            Genera el enlace visible exigido para tu tienda virtual (<code class="font-mono text-blue-600 bg-blue-50 px-1 py-0.5 rounded">/l/{slug}</code>) y copia el snippet HTML para insertar el ícono oficial en el footer de tu sitio web.
+                            Obtén la dirección web única de tu Libro de Reclamaciones (ejemplo: <span class="font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">dateclibro.pe/tu-empresa</span>) y copia un botón listo para colocar en el pie de página de tu tienda online o sitio web.
                         </p>
                     </div>
 
@@ -344,9 +393,9 @@ const rutaDestino = computed(() => {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
                         </div>
-                        <h3 class="text-lg font-bold text-slate-900">Gestión Multisede y Usuarios</h3>
+                        <h3 class="text-lg font-bold text-slate-900">Gestión Multisede y Locales</h3>
                         <p class="text-xs text-slate-600 leading-relaxed">
-                            Administra múltiples tiendas físicas con código de establecimiento y asigna roles restringidos (Administrador de Empresa, Gestor de Reclamaciones y Lector/Auditor).
+                            Administra múltiples tiendas físicas con código de establecimiento oficial y centraliza la atención y respuesta de todos tus reclamos en un único panel de control.
                         </p>
                     </div>
 
@@ -497,122 +546,6 @@ const rutaDestino = computed(() => {
             </div>
         </section>
 
-        <!-- Sección de Casos de Éxito y Testimonios (Inferior Derecha en SmartWing) -->
-        <section id="casos-exito" class="py-20 lg:py-28 bg-[#FBFDFF] border-t border-slate-100">
-            <div class="mx-auto max-w-7xl px-6 space-y-12">
-                <div class="text-center space-y-3">
-                    <span class="text-xs font-bold uppercase tracking-wider text-blue-600">
-                        Resultados Comprobados
-                    </span>
-                    <h2 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-                        Casos de éxito en la <span class="text-blue-600">práctica</span>
-                    </h2>
-                    <p class="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto">
-                        Historias reales de empresas peruanas que modernizaron su Libro de Reclamaciones con Datec Libro.
-                    </p>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Caso de Estudio 1: E-commerce -->
-                    <div class="rounded-2xl border border-slate-200 bg-white p-7 shadow-xs hover:shadow-md transition space-y-6">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-                            <div>
-                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block">Caso 01 • Comercio Electrónico</span>
-                                <h4 class="text-base font-bold text-slate-900">Retail & Marketplace Digital</h4>
-                            </div>
-                            <span class="rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold px-3 py-1">
-                                12 Tiendas Virtuales
-                            </span>
-                        </div>
-
-                        <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
-                            <p>
-                                <strong class="text-slate-900 font-semibold">El desafío:</strong> Administrar más de 400 órdenes diarias con reclamos dispersos por correo sin numeración correlativa estricta.
-                            </p>
-                            <p>
-                                <strong class="text-slate-900 font-semibold">La solución:</strong> Centralización en Datec Libro con enlace público en footer y generación automática de constancia en PDF.
-                            </p>
-                        </div>
-
-                        <!-- Métricas del Caso -->
-                        <div class="grid grid-cols-3 gap-2 py-3 border-y border-slate-100 text-center">
-                            <div>
-                                <span class="text-lg font-extrabold text-blue-600 block">100%</span>
-                                <span class="text-[10px] text-slate-500">Conformidad legal</span>
-                            </div>
-                            <div>
-                                <span class="text-lg font-extrabold text-slate-900 block">-65%</span>
-                                <span class="text-[10px] text-slate-500">Tiempo de respuesta</span>
-                            </div>
-                            <div>
-                                <span class="text-lg font-extrabold text-emerald-600 block">0</span>
-                                <span class="text-[10px] text-slate-500">Sanciones Indecopi</span>
-                            </div>
-                        </div>
-
-                        <!-- Cita de testimonio con avatar -->
-                        <div class="flex items-center gap-3 pt-1">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-xs">
-                                CR
-                            </div>
-                            <div>
-                                <span class="text-xs font-bold text-slate-900 block">Carlos Rodríguez</span>
-                                <span class="text-[10px] text-slate-500 block">Gerente de Operaciones y E-Commerce</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Caso de Estudio 2: Empresa de Servicios -->
-                    <div class="rounded-2xl border border-slate-200 bg-white p-7 shadow-xs hover:shadow-md transition space-y-6">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-                            <div>
-                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block">Caso 02 • Servicios y Consultoría</span>
-                                <h4 class="text-base font-bold text-slate-900">Cadena de Servicios Profesionales</h4>
-                            </div>
-                            <span class="rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold px-3 py-1">
-                                8 Sedes Físicas
-                            </span>
-                        </div>
-
-                        <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
-                            <p>
-                                <strong class="text-slate-900 font-semibold">El desafío:</strong> Libro físico en cada local con dificultades para auditar plazos y consolidar quejas sobre atención del personal.
-                            </p>
-                            <p>
-                                <strong class="text-slate-900 font-semibold">La solución:</strong> Implementación del libro digital en tablets en cada local con distinción precisa de Reclamo vs Queja.
-                            </p>
-                        </div>
-
-                        <!-- Métricas del Caso -->
-                        <div class="grid grid-cols-3 gap-2 py-3 border-y border-slate-100 text-center">
-                            <div>
-                                <span class="text-lg font-extrabold text-blue-600 block">8 Sedes</span>
-                                <span class="text-[10px] text-slate-500">Unificadas</span>
-                            </div>
-                            <div>
-                                <span class="text-lg font-extrabold text-slate-900 block">3.8 días</span>
-                                <span class="text-[10px] text-slate-500">Promedio resolución</span>
-                            </div>
-                            <div>
-                                <span class="text-lg font-extrabold text-emerald-600 block">98.5%</span>
-                                <span class="text-[10px] text-slate-500">Satisfacción cliente</span>
-                            </div>
-                        </div>
-
-                        <!-- Cita de testimonio con avatar -->
-                        <div class="flex items-center gap-3 pt-1">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs">
-                                MV
-                            </div>
-                            <div>
-                                <span class="text-xs font-bold text-slate-900 block">Mariana Valdivia</span>
-                                <span class="text-[10px] text-slate-500 block">Directora de Experiencia del Cliente</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
 
         <!-- Pie de Página Institucional -->
         <footer id="plataforma" class="border-t border-slate-200 bg-white py-12 text-slate-600 text-xs">

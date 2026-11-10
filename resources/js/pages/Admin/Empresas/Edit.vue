@@ -118,7 +118,7 @@ function submit() {
                         </div>
 
                         <div class="sm:col-span-2">
-                            <label class="block text-xs font-semibold text-slate-700">Enlace Personalizado / Slug *</label>
+                            <label class="block text-xs font-semibold text-slate-700">Dirección Web Personalizada (Enlace del Libro) *</label>
                             <div class="mt-1 flex rounded-lg shadow-xs">
                                 <span class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 px-3 text-xs text-slate-500 font-mono">
                                     https://libro.datec.pe/l/

@@ -136,24 +136,24 @@ function eliminar(est: EstablecimientoItem) {
                         href="/configuracion/empresa"
                         class="border-b-2 border-transparent pb-3 text-slate-500 hover:border-slate-300 hover:text-slate-700"
                     >
-                        Identidad Legal (RF-008)
+                        Identidad Legal 
                     </Link>
                     <Link
                         href="/configuracion/personalizacion"
                         class="border-b-2 border-transparent pb-3 text-slate-500 hover:border-slate-300 hover:text-slate-700"
                     >
-                        Personalización Visual (RF-009)
+                        Personalización Visual 
                     </Link>
                     <Link
                         href="/configuracion/establecimientos"
                         class="border-b-2 border-blue-600 pb-3 text-blue-600 font-semibold"
                     >
-                        Establecimientos y Sedes (RF-010)
+                        Establecimientos y Sedes 
                     </Link>
                 </nav>
             </div>
 
-            <!-- AVISO DE REGLA NORMATIVA (CRITERIO DE ACEPTACIÓN RF-010) -->
+            <!-- AVISO DE REGLA NORMATIVA (CRITERIO DE ACEPTACIÓN ) -->
             <div class="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 shadow-xs">
                 <div class="flex items-start gap-3">
                     <svg class="h-5 w-5 text-blue-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

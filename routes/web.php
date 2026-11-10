@@ -1,18 +1,25 @@
 <?php
 
 use App\Http\Controllers\Admin\AuditoriaController as AdminAuditoriaController;
+use App\Http\Controllers\Admin\ContingenciaController as AdminContingenciaController;
 use App\Http\Controllers\Admin\EmpresaController;
 use App\Http\Controllers\Admin\InvitacionController;
 use App\Http\Controllers\Admin\MonitoreoController;
+use App\Http\Controllers\Admin\SalidaClienteController;
+use App\Http\Controllers\Admin\SoporteController as AdminSoporteController;
 use App\Http\Controllers\Auth\AceptarInvitacionController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Empresa\AuditoriaController as EmpresaAuditoriaController;
 use App\Http\Controllers\Empresa\CambiarEmpresaController;
+use App\Http\Controllers\Empresa\ContingenciaController as EmpresaContingenciaController;
 use App\Http\Controllers\Empresa\DashboardController;
 use App\Http\Controllers\Empresa\EstablecimientoController;
 use App\Http\Controllers\Empresa\ExpedienteController;
 use App\Http\Controllers\Empresa\IdentidadLegalController;
+use App\Http\Controllers\Empresa\IntegracionController;
+use App\Http\Controllers\Empresa\NotificacionConfigController;
 use App\Http\Controllers\Empresa\PersonalizacionController;
+use App\Http\Controllers\Empresa\SoporteController as EmpresaSoporteController;
 use App\Http\Controllers\Empresa\UsuarioController;
 use App\Http\Controllers\Publico\ConsultaEstadoController;
 use App\Http\Controllers\Publico\LibroReclamacionesController;
@@ -54,10 +61,36 @@ Route::prefix('admin')->name('admin.')->middleware(['superadmin'])->group(functi
         ->name('monitoreo.colas.reintentar');
     Route::delete('monitoreo/colas/{id}', [MonitoreoController::class, 'eliminarJob'])
         ->name('monitoreo.colas.eliminar');
+    Route::post('monitoreo/verificar-salud', [MonitoreoController::class, 'verificarSalud'])
+        ->name('monitoreo.verificar-salud');
+    Route::post('monitoreo/alertas/{alerta}/resolver', [MonitoreoController::class, 'resolverAlerta'])
+        ->name('monitoreo.alertas.resolver');
 
     // Historial Global de Auditoría
     Route::get('auditoria', [AdminAuditoriaController::class, 'index'])
         ->name('auditoria.index');
+
+    // Gestión y Solicitud de Soporte Técnico y Acceso Delegado
+    Route::get('soporte', [AdminSoporteController::class, 'index'])
+        ->name('soporte.index');
+    Route::post('soporte/solicitar', [AdminSoporteController::class, 'solicitar'])
+        ->name('soporte.solicitar');
+
+    // Supervisión Centralizada de Contingencias y Ensayos
+    Route::get('contingencia', [AdminContingenciaController::class, 'index'])
+        ->name('contingencia.index');
+    Route::post('contingencia/{empresa}/activar', [AdminContingenciaController::class, 'activar'])
+        ->name('contingencia.activar');
+    Route::post('contingencia/{empresa}/desactivar', [AdminContingenciaController::class, 'desactivar'])
+        ->name('contingencia.desactivar');
+
+    // Desactivación, Salida Formal y Custodia Legal de Clientes
+    Route::post('empresas/{empresa}/baja', [SalidaClienteController::class, 'procesarBaja'])
+        ->name('empresas.baja');
+    Route::post('empresas/{empresa}/custodia/generar', [SalidaClienteController::class, 'generarPaquete'])
+        ->name('empresas.custodia.generar');
+    Route::get('empresas/{empresa}/custodia/descargar', [SalidaClienteController::class, 'descargarPaquete'])
+        ->name('empresas.custodia.descargar');
 });
 
 // Aceptación de invitaciones para administradores de empresa
@@ -117,6 +150,40 @@ Route::middleware(['tenant.access'])->group(function () {
     // Historial de Auditoría del Tenant
     Route::get('configuracion/auditoria', [EmpresaAuditoriaController::class, 'index'])
         ->name('empresa.auditoria.index');
+
+    // Configuración de Destinatarios y Alertas de Notificación
+    Route::get('configuracion/notificaciones', [NotificacionConfigController::class, 'edit'])
+        ->name('empresa.notificaciones.edit');
+    Route::put('configuracion/notificaciones', [NotificacionConfigController::class, 'update'])
+        ->name('empresa.notificaciones.update');
+
+    // Gestión y Control de Acceso Delegado para Soporte Técnico Datec
+    Route::get('configuracion/soporte', [EmpresaSoporteController::class, 'index'])
+        ->name('empresa.soporte.index');
+    Route::post('configuracion/soporte', [EmpresaSoporteController::class, 'store'])
+        ->name('empresa.soporte.store');
+    Route::patch('configuracion/soporte/{id}/autorizar', [EmpresaSoporteController::class, 'autorizar'])
+        ->name('empresa.soporte.autorizar');
+    Route::patch('configuracion/soporte/{id}/revocar', [EmpresaSoporteController::class, 'revocar'])
+        ->name('empresa.soporte.revocar');
+
+    // Plan de Contingencia y Ensayos Preventivos (DR Rehearsal)
+    Route::get('configuracion/contingencia', [EmpresaContingenciaController::class, 'index'])
+        ->name('empresa.contingencia.index');
+    Route::post('configuracion/contingencia/activar', [EmpresaContingenciaController::class, 'activar'])
+        ->name('empresa.contingencia.activar');
+    Route::post('configuracion/contingencia/desactivar', [EmpresaContingenciaController::class, 'desactivar'])
+        ->name('empresa.contingencia.desactivar');
+    Route::post('configuracion/contingencia/ensayo', [EmpresaContingenciaController::class, 'ejecutarEnsayo'])
+        ->name('empresa.contingencia.ensayo');
+
+    // Enlaces de Integración y Reconfiguración de Slug
+    Route::get('configuracion/integracion', [IntegracionController::class, 'index'])
+        ->name('empresa.integracion.index');
+    Route::post('configuracion/integracion/slug', [IntegracionController::class, 'cambiarSlug'])
+        ->name('empresa.integracion.slug');
+    Route::post('configuracion/integracion/slug/verificar', [IntegracionController::class, 'verificarDisponibilidad'])
+        ->name('empresa.integracion.slug.verificar');
 
     // Selector de Empresa Multitenant
     Route::post('cambiar-empresa', [CambiarEmpresaController::class, 'switch'])

@@ -61,7 +61,7 @@ beforeEach(function () {
     ]);
 
     $this->gestorA->empresas()->attach($this->empresaA->id, [
-        'rol' => RolEmpresa::GestorReclamaciones->value,
+        'rol' => RolEmpresa::AdminEmpresa->value,
         'activo' => true,
     ]);
 });

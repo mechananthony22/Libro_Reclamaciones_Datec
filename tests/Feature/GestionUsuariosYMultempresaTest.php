@@ -24,7 +24,7 @@ test('el administrador empresarial puede invitar un usuario a su empresa', funct
         ->withSession(['empresa_actual_id' => $empresa->id])
         ->post(route('empresa.usuarios.invitar'), [
             'email' => 'operador@alfa.com',
-            'rol' => RolEmpresa::GestorReclamaciones->value,
+            'rol' => RolEmpresa::AdminEmpresa->value,
         ])
         ->assertRedirect()
         ->assertSessionHas('success');
@@ -32,7 +32,7 @@ test('el administrador empresarial puede invitar un usuario a su empresa', funct
     $this->assertDatabaseHas('invitaciones_empresa', [
         'empresa_id' => $empresa->id,
         'email' => 'operador@alfa.com',
-        'rol' => RolEmpresa::GestorReclamaciones->value,
+        'rol' => RolEmpresa::AdminEmpresa->value,
     ]);
 });
 
@@ -84,7 +84,7 @@ test('no se puede editar ni desactivar usuarios de tenants ajenos', function () 
     $empresa1->usuarios()->attach($admin1->id, ['rol' => RolEmpresa::AdminEmpresa->value, 'activo' => true]);
 
     $usuario2 = User::factory()->create();
-    $empresa2->usuarios()->attach($usuario2->id, ['rol' => RolEmpresa::GestorReclamaciones->value, 'activo' => true]);
+    $empresa2->usuarios()->attach($usuario2->id, ['rol' => RolEmpresa::AdminEmpresa->value, 'activo' => true]);
 
     // Admin1 intenta desactivar usuario2 de Empresa2
     $this->actingAs($admin1)
@@ -136,7 +136,7 @@ test('usuario multempresa puede alternar su tenant activo', function () {
 
     $usuario = User::factory()->create();
     $empresaA->usuarios()->attach($usuario->id, ['rol' => RolEmpresa::AdminEmpresa->value, 'activo' => true]);
-    $empresaB->usuarios()->attach($usuario->id, ['rol' => RolEmpresa::LectorEmpresa->value, 'activo' => true]);
+    $empresaB->usuarios()->attach($usuario->id, ['rol' => RolEmpresa::AdminEmpresa->value, 'activo' => true]);
 
     // Cambiar a Empresa B
     $this->actingAs($usuario)

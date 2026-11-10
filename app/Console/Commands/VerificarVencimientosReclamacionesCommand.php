@@ -61,8 +61,17 @@ class VerificarVencimientosReclamacionesCommand extends Command
             $diasRestantes = $semaforo['dias_restantes'];
             $esVencido = $semaforo['vencido'] ?? false;
 
-            // Determinar si corresponde alertar (ya venció o está dentro de los días hábiles de anticipación)
-            $debeAlertar = $esVencido || ($diasRestantes <= $diasAnticipacion && $diasRestantes >= 0);
+            // Configuración de alertas personalizada de la empresa (RF-039)
+            $diasUmbralEmpresa = $rec->empresa?->dias_anticipacion_alerta ?? $diasAnticipacion;
+            $notificarPreventivo = (bool) ($rec->empresa?->notificar_vencimiento_preventivo ?? true);
+
+            // Si aún no vence y la empresa desactivó alertas preventivas, omitir
+            if (! $esVencido && ! $notificarPreventivo) {
+                continue;
+            }
+
+            // Determinar si corresponde alertar (vencido normativo o dentro del umbral preventivo)
+            $debeAlertar = $esVencido || ($diasRestantes <= $diasUmbralEmpresa && $diasRestantes >= 0);
 
             if (! $debeAlertar) {
                 continue;
@@ -79,7 +88,7 @@ class VerificarVencimientosReclamacionesCommand extends Command
                 continue;
             }
 
-            // Recopilar destinatarios: responsable asignado y administradores de la empresa
+            // Recopilar destinatarios: responsable asignado, usuarios de gestión y destinatarios adicionales configurados
             $destinatarios = [];
 
             if ($rec->responsable?->email) {
@@ -92,24 +101,15 @@ class VerificarVencimientosReclamacionesCommand extends Command
                         $rol = strtolower((string) ($usuario->pivot->rol ?? ''));
                         $activo = (bool) ($usuario->pivot->activo ?? true);
 
-                        return $activo && in_array($rol, [
-                            RolEmpresa::AdminEmpresa->value,
-                            RolEmpresa::GestorReclamaciones->value,
-                        ], true);
+                        return $activo && $rol === RolEmpresa::AdminEmpresa->value;
                     })
                     ->pluck('email')
                     ->all();
 
                 $destinatarios = array_merge($destinatarios, $adminEmails);
 
-                // Si no hay administradores vinculados, se usa el email principal o representante
-                if (empty($destinatarios)) {
-                    if ($rec->empresa->email) {
-                        $destinatarios[] = $rec->empresa->email;
-                    } elseif ($rec->empresa->representante_email) {
-                        $destinatarios[] = $rec->empresa->representante_email;
-                    }
-                }
+                // Destinatarios adicionales de la empresa (RF-039)
+                $destinatarios = array_merge($destinatarios, $rec->empresa->destinatariosNotificaciones());
             }
 
             $destinatarios = array_values(array_unique(array_filter($destinatarios)));

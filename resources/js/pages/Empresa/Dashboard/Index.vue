@@ -571,11 +571,11 @@ function porcentaje(parcial: number, total: number): number {
             </div>
 
             <!-- Desglose por Sedes / Establecimientos -->
-            <div v-if="desgloseSedes.length > 0" class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
+            <div v-if="desglose_sedes && desglose_sedes.length > 0" class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
                 <h2 class="text-sm font-bold text-slate-900 mb-3">Expedientes por Sede o Sucursal</h2>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     <div
-                        v-for="sede in desgloseSedes"
+                        v-for="sede in desglose_sedes"
                         :key="sede.id"
                         class="rounded-xl border border-slate-100 bg-slate-50/70 p-3"
                     >

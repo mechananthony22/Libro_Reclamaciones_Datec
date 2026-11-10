@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'api' => [
+        'public_enabled' => env('API_PUBLICA_HABILITADA', false),
+    ],
+
 ];

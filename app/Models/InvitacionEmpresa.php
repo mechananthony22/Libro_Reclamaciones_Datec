@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\RolEmpresa;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -27,10 +28,20 @@ class InvitacionEmpresa extends Model
     protected function casts(): array
     {
         return [
-            'rol' => RolEmpresa::class,
             'expires_at' => 'datetime',
             'accepted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Accesor y mutador seguro para el rol de invitación.
+     */
+    protected function rol(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => RolEmpresa::tryFrom((string) $value) ?? RolEmpresa::AdminEmpresa,
+            set: fn ($value) => $value instanceof RolEmpresa ? $value->value : (string) ($value ?: RolEmpresa::AdminEmpresa->value),
+        );
     }
 
     /**

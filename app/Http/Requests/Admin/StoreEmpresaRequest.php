@@ -29,7 +29,7 @@ class StoreEmpresaRequest extends FormRequest
                 'regex:/^(10|20)[0-9]{9}$/',
                 'unique:tenants,ruc',
             ],
-            'slug' => ['nullable', 'string', 'max:100', 'alpha_dash', 'unique:tenants,slug'],
+            'slug' => ['nullable', 'string', 'max:100', 'alpha_dash', 'unique:tenants,slug', 'unique:empresa_slug_historial,slug_antiguo'],
             'direccion' => ['required', 'string', 'max:500'],
             'email' => ['nullable', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:30'],

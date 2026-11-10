@@ -51,12 +51,12 @@ const showModalInvitar = ref(false);
 const formInvitar = useForm({
     email: '',
     nombre: '',
-    rol: 'gestor_reclamaciones',
+    rol: 'admin_empresa',
 });
 
 function abrirModalInvitar() {
     formInvitar.reset();
-    formInvitar.rol = 'gestor_reclamaciones';
+    formInvitar.rol = 'admin_empresa';
     showModalInvitar.value = true;
 }
 
@@ -134,11 +134,7 @@ function copiarEnlace(enlace: string) {
 function getBadgeRol(rol: string) {
     switch (rol) {
         case 'admin_empresa':
-            return 'bg-purple-100 text-purple-800 border-purple-200';
-        case 'gestor_reclamaciones':
-            return 'bg-blue-100 text-blue-800 border-blue-200';
-        case 'lector_empresa':
-            return 'bg-slate-100 text-slate-800 border-slate-200';
+            return 'bg-blue-50 text-blue-700 border-blue-200';
         default:
             return 'bg-slate-100 text-slate-700 border-slate-200';
     }
@@ -217,7 +213,7 @@ function getBadgeRol(rol: string) {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                     <div class="text-xs text-purple-900 leading-relaxed">
-                        <strong>Principio de Privilegio Mínimo (RF-011):</strong> Solo puedes asignar roles autorizados para tu empresa (Administrador, Gestor o Lector). No está permitido conceder roles globales ni visualizar miembros de otros tenants.
+                        <strong>Principio de Privilegio Mínimo:</strong> Solo puedes invitar y gestionar administradores para tu empresa. No está permitido conceder accesos globales ni visualizar usuarios de otras empresas.
                     </div>
                 </div>
             </div>
@@ -412,7 +408,7 @@ function getBadgeRol(rol: string) {
                             v-model="formInvitar.email"
                             type="email"
                             required
-                            placeholder="gestor@miempresa.com"
+                            placeholder="admin@miempresa.com"
                             class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"
                         />
                         <div v-if="formInvitar.errors.email" class="text-xs text-rose-600 mt-1">{{ formInvitar.errors.email }}</div>

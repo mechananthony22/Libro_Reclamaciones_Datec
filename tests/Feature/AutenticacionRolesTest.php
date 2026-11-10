@@ -4,6 +4,7 @@ use App\Enums\EstadoEmpresa;
 use App\Enums\PlanEmpresa;
 use App\Enums\RolEmpresa;
 use App\Models\Empresa;
+use App\Models\InvitacionEmpresa;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
@@ -90,4 +91,60 @@ test('un usuario autenticado puede cerrar sesion correctamente', function () {
 
     $this->assertGuest();
     $response->assertRedirect(route('login'));
+});
+
+test('superadministrador puede acceder al dashboard de la empresa seleccionada sin errores', function () {
+    $empresa = Empresa::create([
+        'name' => 'Empresa Test',
+        'slug' => 'empresa-test',
+        'razon_social' => 'EMPRESA TEST SAC',
+        'ruc' => '20123987459',
+        'direccion' => 'Av. Test 123',
+        'estado' => EstadoEmpresa::Activa,
+        'plan' => PlanEmpresa::Basico,
+        'activo' => true,
+    ]);
+
+    $superadmin = User::create([
+        'name' => 'Superadmin Global',
+        'email' => 'global@datec.pe',
+        'password' => Hash::make('password123'),
+        'is_superadmin' => true,
+    ]);
+
+    $response = $this->actingAs($superadmin)->get('/dashboard');
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->component('Empresa/Dashboard/Index'));
+});
+
+test('el superadministrador puede acceder al listado de empresas con invitaciones existentes', function () {
+    $empresa = Empresa::create([
+        'name' => 'Empresa Con Invitacion',
+        'slug' => 'empresa-con-invitacion',
+        'razon_social' => 'EMPRESA INVITACION SAC',
+        'ruc' => '20123987451',
+        'direccion' => 'Av. Test 456',
+        'estado' => EstadoEmpresa::Activa,
+        'plan' => PlanEmpresa::Basico,
+        'activo' => true,
+    ]);
+
+    InvitacionEmpresa::create([
+        'empresa_id' => $empresa->id,
+        'email' => 'operador@test.com',
+        'rol' => 'gestor_reclamaciones',
+        'token' => 'tokentest1234567890123456789012345678901234567890',
+        'expires_at' => now()->addDays(2),
+    ]);
+
+    $superadmin = User::create([
+        'name' => 'Superadmin Global 2',
+        'email' => 'global2@datec.pe',
+        'password' => Hash::make('password123'),
+        'is_superadmin' => true,
+    ]);
+
+    $response = $this->actingAs($superadmin)->get(route('admin.empresas.index'));
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->component('Admin/Empresas/Index'));
 });

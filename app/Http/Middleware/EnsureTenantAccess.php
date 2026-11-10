@@ -37,6 +37,13 @@ class EnsureTenantAccess
             if ($empresaPivote) {
                 $tenantId = $empresaPivote->id;
                 session(['current_tenant_id' => $tenantId]);
+            } elseif ($user->isSuperAdmin()) {
+                // Si es superadmin sin empresa en sesión, seleccionar la primera empresa disponible
+                $primeraEmpresa = Empresa::where('activo', true)->first() ?: Empresa::first();
+                if ($primeraEmpresa) {
+                    $tenantId = $primeraEmpresa->id;
+                    session(['current_tenant_id' => $tenantId]);
+                }
             }
         }
 
@@ -45,6 +52,9 @@ class EnsureTenantAccess
             if ($tenantId) {
                 $empresa = Empresa::find($tenantId);
                 $empresa?->makeCurrent();
+            } else {
+                return redirect()->route('admin.empresas.index')
+                    ->with('error', 'No hay ninguna empresa registrada para visualizar.');
             }
 
             return $next($request);

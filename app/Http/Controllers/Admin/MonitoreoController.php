@@ -7,6 +7,8 @@ use App\Enums\PlanEmpresa;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\InvitacionEmpresa;
+use App\Models\PlataformaAlerta;
+use App\Services\PlataformaSaludService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +17,10 @@ use Inertia\Response;
 
 class MonitoreoController extends Controller
 {
+    public function __construct(
+        protected PlataformaSaludService $saludService
+    ) {}
+
     public function index(): Response
     {
         $hoy = now()->toDateString();
@@ -37,7 +43,7 @@ class MonitoreoController extends Controller
             ];
         }
 
-        // 2. Suscripciones y vencimientos (RF-003, RF-005)
+        // 2. Suscripciones y vencimientos 
         $suscripcionesPorVencer = Empresa::query()
             ->whereNotNull('vigencia_hasta')
             ->whereBetween('vigencia_hasta', [$hoy, $en30Dias])
@@ -54,7 +60,7 @@ class MonitoreoController extends Controller
         $jobsPendientes = DB::table('jobs')->count();
         $jobsFallidos = DB::table('failed_jobs')->count();
 
-        // Obtener últimos 10 fallos sanitizados (evitando PII conforme a RF-005)
+        // Obtener últimos 10 fallos sanitizados 
         $ultimosFallosRaw = DB::table('failed_jobs')
             ->latest('failed_at')
             ->limit(10)
@@ -86,7 +92,7 @@ class MonitoreoController extends Controller
             ];
         });
 
-        // 4. Métricas de invitaciones (RF-004)
+        // 4. Métricas de invitaciones 
         $invitaciones = [
             'total' => InvitacionEmpresa::count(),
             'pendientes' => InvitacionEmpresa::whereNull('accepted_at')->where('expires_at', '>', now())->count(),
@@ -115,7 +121,27 @@ class MonitoreoController extends Controller
                 'ultimos_fallos' => $fallosSanitizados,
             ],
             'invitaciones' => $invitaciones,
+            'salud' => $this->saludService->evaluarUmbralesYAlertar(),
         ]);
+    }
+
+    public function verificarSalud(): RedirectResponse
+    {
+        $diagnostico = $this->saludService->evaluarUmbralesYAlertar();
+        $totalAlertas = count($diagnostico['alertas_activas']);
+
+        $mensaje = $totalAlertas > 0
+            ? "Verificación completada: se detectaron {$totalAlertas} alertas operativas activas por desvío de umbrales."
+            : 'Verificación completada: todos los servicios y tareas operan dentro de los umbrales normales.';
+
+        return back()->with('success', $mensaje);
+    }
+
+    public function resolverAlerta(PlataformaAlerta $alerta): RedirectResponse
+    {
+        $this->saludService->resolverAlerta($alerta);
+
+        return back()->with('success', "Alerta operativa #{$alerta->id} resuelta correctamente.");
     }
 
     public function reintentarJob(string $id): RedirectResponse

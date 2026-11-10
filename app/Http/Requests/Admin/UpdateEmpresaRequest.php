@@ -37,6 +37,7 @@ class UpdateEmpresaRequest extends FormRequest
                 'max:100',
                 'alpha_dash',
                 Rule::unique('tenants', 'slug')->ignore($empresaId),
+                Rule::unique('empresa_slug_historial', 'slug_antiguo')->where(fn ($q) => $q->where('empresa_id', '!=', $empresaId)),
             ],
             'direccion' => ['required', 'string', 'max:500'],
             'email' => ['nullable', 'email', 'max:255'],

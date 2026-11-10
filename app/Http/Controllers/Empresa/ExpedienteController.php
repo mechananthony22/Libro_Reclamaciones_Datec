@@ -101,12 +101,62 @@ class ExpedienteController extends Controller
     }
 
     /**
+     * Valida la regla de acceso controlado a contenido privado para soporte técnico de Datec (RN-010).
+     */
+    protected function validarAccesoContenido(Request $request, Empresa $empresa): void
+    {
+        $user = $request->user();
+        if (! $user) {
+            abort(401);
+        }
+
+        $esMiembroDirecto = $user->empresas()
+            ->where('tenants.id', $empresa->id)
+            ->wherePivot('activo', true)
+            ->exists();
+
+        if ($esMiembroDirecto) {
+            return;
+        }
+
+        // Si es Superadmin pero no miembro directo de la empresa, requiere autorización delegada activa
+        if ($user->isSuperAdmin()) {
+            $autorizacion = $empresa->autorizacionSoporteActiva();
+
+            if (! $autorizacion) {
+                abort(403, 'Acceso denegado (RN-010): El acceso de soporte técnico de Datec al contenido de expedientes es excepcional y requiere una autorización delegada activa de la empresa.');
+            }
+
+            // Registrar el acceso delegado en la bitácora de auditoría
+            app(AuditoriaService::class)->registrar(
+                'acceso_delegado_soporte',
+                'soporte',
+                "Acceso delegado de soporte técnico a expedientes de {$empresa->name} (Ticket {$autorizacion->codigo_ticket}) por Superadmin {$user->name}",
+                [
+                    'empresa_id' => $empresa->id,
+                    'user' => $user,
+                    'datos_despues' => [
+                        'codigo_ticket' => $autorizacion->codigo_ticket,
+                        'valido_hasta' => $autorizacion->valido_hasta?->toIso8601String(),
+                    ],
+                ]
+            );
+
+            return;
+        }
+
+        abort(403, 'Acceso denegado: no cuentas con permisos para consultar los expedientes de esta empresa.');
+    }
+
+    /**
      * Muestra la bandeja de expedientes con filtros por estado, tipo, sede, rango de fechas y búsqueda.
      */
     public function index(Request $request): Response
     {
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
+
+        $this->validarAccesoContenido($request, $empresa);
 
         $query = $this->construirConsultaFiltrada($request, $empresa->id);
 
@@ -193,6 +243,9 @@ class ExpedienteController extends Controller
     {
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
+
+        $this->validarAccesoContenido($request, $empresa);
+
         $user = $request->user();
         $formato = strtolower((string) $request->input('formato', 'csv'));
 
@@ -242,7 +295,7 @@ class ExpedienteController extends Controller
             ]
         );
 
-        app(\App\Services\AuditoriaService::class)->registrar(
+        app(AuditoriaService::class)->registrar(
             'expedientes_exportados',
             'expedientes',
             'Exportación de expedientes en formato '.strtoupper($formato)." (Total: {$reclamaciones->count()} registros)",
@@ -392,10 +445,12 @@ class ExpedienteController extends Controller
      * Muestra la ficha íntegra de la reclamación con datos inmutables del consumidor,
      * actuaciones, plazos calculados, evidencias adjuntas e historial de eventos.
      */
-    public function show(int $id): Response
+    public function show(Request $request, int $id): Response
     {
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
+
+        $this->validarAccesoContenido($request, $empresa);
 
         $reclamacion = Reclamacion::where('empresa_id', $empresa->id)
             ->with([
@@ -515,10 +570,12 @@ class ExpedienteController extends Controller
     /**
      * Descarga la constancia oficial en formato PDF para el expediente consultado.
      */
-    public function descargarPdf(int $id)
+    public function descargarPdf(Request $request, int $id)
     {
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
+
+        $this->validarAccesoContenido($request, $empresa);
 
         $reclamacion = Reclamacion::where('empresa_id', $empresa->id)->findOrFail($id);
 
@@ -528,10 +585,12 @@ class ExpedienteController extends Controller
     /**
      * Descarga segura de un archivo o evidencia adjunta previa validación de pertenencia al tenant.
      */
-    public function descargarAdjunto(int $id, int $adjuntoId)
+    public function descargarAdjunto(Request $request, int $id, int $adjuntoId)
     {
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
+
+        $this->validarAccesoContenido($request, $empresa);
 
         $reclamacion = Reclamacion::where('empresa_id', $empresa->id)->findOrFail($id);
 
@@ -678,7 +737,7 @@ class ExpedienteController extends Controller
             ]
         );
 
-        app(\App\Services\AuditoriaService::class)->registrar(
+        app(AuditoriaService::class)->registrar(
             'expediente_estado_cambiado',
             'expedientes',
             "Expediente {$reclamacion->numero_hoja}: cambio de estado '{$estadoActual->label()}' → '{$nuevoEstado->label()}'",
@@ -795,7 +854,7 @@ class ExpedienteController extends Controller
             ]
         );
 
-        app(\App\Services\AuditoriaService::class)->registrar(
+        app(AuditoriaService::class)->registrar(
             'respuesta_formal_registrada',
             'expedientes',
             "Respuesta formal emitida para expediente {$reclamacion->numero_hoja} (Sentido: '{$decision->label()}', v{$respuesta->version})",

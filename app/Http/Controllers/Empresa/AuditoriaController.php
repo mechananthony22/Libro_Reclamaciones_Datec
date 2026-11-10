@@ -76,4 +76,3 @@ class AuditoriaController extends Controller
         ]);
     }
 }
-

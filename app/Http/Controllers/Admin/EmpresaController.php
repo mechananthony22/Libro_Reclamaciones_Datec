@@ -12,6 +12,7 @@ use App\Http\Requests\Admin\StoreEmpresaRequest;
 use App\Http\Requests\Admin\UpdateEmpresaRequest;
 use App\Models\Empresa;
 use App\Services\AuditoriaService;
+use App\Services\SlugReconfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -126,7 +127,16 @@ class EmpresaController extends Controller
         $estadoEnum = EstadoEmpresa::from($datos['estado']);
         $datos['activo'] = ($estadoEnum === EstadoEmpresa::Activa);
 
-        $estadoAnterior = $empresa->estado->value;
+        $nuevoSlug = $datos['slug'];
+        if ($nuevoSlug !== $empresa->slug) {
+            app(SlugReconfigurationService::class)->cambiarSlug(
+                $empresa,
+                $nuevoSlug,
+                'Actualización de slug desde panel central de Superadministrador',
+                $request->user()
+            );
+        }
+
         $empresa->update($datos);
 
         app(AuditoriaService::class)->registrar(
