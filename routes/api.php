@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
 | En la versión actual MVP la API pública se mantiene gobernada y deshabilitada.
 |
 */
-Route::prefix('v1')->middleware([EnsureApiEnabled::class])->group(function () {
+Route::prefix('v1')->middleware([EnsureApiEnabled::class, 'throttle:60,1'])->group(function () {
     Route::post('{slug}/reclamaciones', [ReclamacionApiController::class, 'store'])
         ->name('api.v1.reclamaciones.store');
     Route::post('{slug}/reclamaciones/consultar', [ReclamacionApiController::class, 'consultar'])

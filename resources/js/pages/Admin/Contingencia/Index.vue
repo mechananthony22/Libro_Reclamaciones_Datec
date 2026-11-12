@@ -463,7 +463,6 @@ const claseCampo =
                             </div>
                             <div>
                                 <h2 class="text-sm font-bold text-slate-900">Historial Global de Incidentes y Ensayos DR</h2>
-                                <p class="text-xs text-slate-500">Auditoría inmutable de periodos de contingencia y simulacros técnicos de continuidad.</p>
                             </div>
                         </div>
 

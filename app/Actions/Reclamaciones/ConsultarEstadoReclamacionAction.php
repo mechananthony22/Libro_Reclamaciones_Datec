@@ -33,6 +33,8 @@ class ConsultarEstadoReclamacionAction
         }
 
         $consumidor = $reclamacion->datos_consumidor ?? [];
+        $nombreCompleto = trim(($consumidor['nombres'] ?? '').' '.($consumidor['apellidos'] ?? ''));
+        $ultimaRespuesta = $reclamacion->respuestas->first();
 
         return [
             'id' => $reclamacion->id,
@@ -44,13 +46,35 @@ class ConsultarEstadoReclamacionAction
             'fecha_hora' => $reclamacion->fecha_hora?->format('d/m/Y H:i'),
             'estado' => $reclamacion->estado->value,
             'estado_label' => $reclamacion->estado->label(),
-            'consumidor_nombre' => trim(($consumidor['nombres'] ?? '').' '.($consumidor['apellidos'] ?? '')),
+            'consumidor_nombre' => $this->enmascararNombre($nombreCompleto),
             'establecimiento' => $reclamacion->establecimiento?->nombre ?? 'Sede Principal',
             'detalle_problema' => $reclamacion->detalle_problema,
             'pedido_consumidor' => $reclamacion->pedido_consumidor,
-            'respuesta' => $reclamacion->respuesta_texto,
-            'fecha_respuesta' => $reclamacion->fecha_respuesta?->format('d/m/Y H:i'),
+            'respuesta' => $ultimaRespuesta?->propuesta_solucion,
+            'fecha_respuesta' => $ultimaRespuesta?->fecha_respuesta?->format('d/m/Y H:i') ?? $ultimaRespuesta?->created_at?->format('d/m/Y H:i'),
             'constancia_pdf_disponible' => (bool) $reclamacion->constancia_pdf_path,
         ];
+    }
+
+    /**
+     * Enmascara el nombre del consumidor protegiendo su privacidad.
+     */
+    protected function enmascararNombre(string $nombre): string
+    {
+        if (trim($nombre) === '') {
+            return '';
+        }
+
+        $partes = explode(' ', trim($nombre));
+        $enmascaradas = array_map(function (string $p) {
+            $len = mb_strlen($p);
+            if ($len <= 2) {
+                return $p;
+            }
+
+            return mb_substr($p, 0, 1).str_repeat('*', $len - 2).mb_substr($p, -1, 1);
+        }, $partes);
+
+        return implode(' ', $enmascaradas);
     }
 }

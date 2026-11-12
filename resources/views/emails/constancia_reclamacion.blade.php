@@ -44,7 +44,7 @@
                     </tr>
                     <tr>
                         <td style="padding: 4px 0; color: #64748b;"><strong>Plazo Legal de Respuesta:</strong></td>
-                        <td style="padding: 4px 0; color: #0f172a;">15 días hábiles (Vence: {{ $reclamacion->vence_en?->format('d/m/Y') ?? now()->addWeekdays(15)->format('d/m/Y') }})</td>
+                        <td style="padding: 4px 0; color: #0f172a;">15 días hábiles (Vence: {{ $reclamacion->vence_en?->format('d/m/Y') ?? '15 días hábiles' }})</td>
                     </tr>
                     <tr>
                         <td style="padding: 4px 0; color: #64748b;"><strong>Código de Consulta:</strong></td>

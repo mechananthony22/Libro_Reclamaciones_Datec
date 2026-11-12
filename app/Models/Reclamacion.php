@@ -6,6 +6,7 @@ use App\Enums\EstadoReclamacion;
 use App\Enums\TipoBien;
 use App\Enums\TipoReclamacion;
 use App\Models\Concerns\BelongsToEmpresa;
+use App\Services\PlazoReclamacionService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -77,6 +78,14 @@ class Reclamacion extends Model
      */
     protected static function booted(): void
     {
+        static::creating(function (Reclamacion $reclamacion) {
+            if (empty($reclamacion->vence_en)) {
+                $fechaBase = $reclamacion->fecha_hora ?? now();
+                $reclamacion->vence_en = app(PlazoReclamacionService::class)
+                    ->calcularFechaVencimiento($fechaBase, 15);
+            }
+        });
+
         static::deleting(function (Reclamacion $reclamacion) {
             throw new \DomainException('La eliminación de reclamaciones está estrictamente prohibida por normativa legal (D.S. N° 011-2011-PCM / Ley N° 29571). Los expedientes deben conservarse de forma íntegra e inmutable.');
         });

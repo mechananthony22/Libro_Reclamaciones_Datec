@@ -33,7 +33,11 @@ class EnsureTenantAccess
 
         if (! $tenantId) {
             // Asignar la primera empresa activa a la que pertenece el usuario o la activa en el contexto
-            $empresaPivote = $user->empresas()->wherePivot('activo', true)->first() ?: Empresa::current();
+            $empresaPivote = $user->empresas()
+                ->wherePivot('activo', true)
+                ->where('tenants.activo', true)
+                ->first() ?: Empresa::current();
+
             if ($empresaPivote) {
                 $tenantId = $empresaPivote->id;
                 session(['current_tenant_id' => $tenantId]);

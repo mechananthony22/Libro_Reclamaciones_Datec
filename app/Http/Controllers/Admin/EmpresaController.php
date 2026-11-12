@@ -15,6 +15,7 @@ use App\Services\AuditoriaService;
 use App\Services\SlugReconfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -165,12 +166,32 @@ class EmpresaController extends Controller
         $estadoAnterior = $empresa->estado->value;
         $nuevoEstado = EstadoEmpresa::from($request->validated('estado'));
 
+        $activo = ($nuevoEstado === EstadoEmpresa::Activa);
+
         $empresa->update([
             'estado' => $nuevoEstado,
             'motivo_cambio_estado' => $request->validated('motivo'),
             'fecha_cambio_estado' => now(),
-            'activo' => ($nuevoEstado === EstadoEmpresa::Activa),
+            'activo' => $activo,
         ]);
+
+        // Si se reactiva la empresa (Pilar A), reactivar automáticamente los accesos de sus administradores
+        if ($activo) {
+            DB::table('empresa_usuario')
+                ->where('empresa_id', $empresa->id)
+                ->update([
+                    'activo' => true,
+                    'updated_at' => now(),
+                ]);
+        } elseif ($nuevoEstado === EstadoEmpresa::Suspendida || $nuevoEstado === EstadoEmpresa::BajaProgramada) {
+            // Si se suspende o da de baja, suspender accesos vinculados a esta empresa
+            DB::table('empresa_usuario')
+                ->where('empresa_id', $empresa->id)
+                ->update([
+                    'activo' => false,
+                    'updated_at' => now(),
+                ]);
+        }
 
         app(AuditoriaService::class)->registrar(
             'empresa_estado_cambiado',

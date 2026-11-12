@@ -55,8 +55,72 @@ function cambiarTenant(event: Event) {
 // MODO E-COMMERCE / ADMINISTRADOR ÚNICO:
 // Cambiar a 'true' para reactivar módulos secundarios en el menú lateral
 // =========================================================================
-const HABILITAR_MODULO_USUARIOS = false;
-const HABILITAR_MODULO_AUDITORIA_EMPRESA = false;
+const HABILITAR_MODULO_USUARIOS = true;
+const HABILITAR_MODULO_AUDITORIA_EMPRESA = true;
+
+// Gestión de notificación modal emergente (Toast/Modal con temporizador y barra de progreso)
+interface NotificacionModal {
+    tipo: 'success' | 'error';
+    titulo: string;
+    mensaje: string;
+}
+
+const notificacionActiva = ref<NotificacionModal | null>(null);
+const progresoPorcentaje = ref(100);
+let timerNotificacion: ReturnType<typeof setTimeout> | null = null;
+let animacionIntervalo: ReturnType<typeof setInterval> | null = null;
+const DURACION_MS = 4000;
+
+function cerrarNotificacion() {
+    if (timerNotificacion) clearTimeout(timerNotificacion);
+    if (animacionIntervalo) clearInterval(animacionIntervalo);
+    notificacionActiva.value = null;
+    progresoPorcentaje.value = 100;
+}
+
+function dispararNotificacion(tipo: 'success' | 'error', mensaje: string) {
+    if (timerNotificacion) clearTimeout(timerNotificacion);
+    if (animacionIntervalo) clearInterval(animacionIntervalo);
+
+    notificacionActiva.value = {
+        tipo,
+        titulo: tipo === 'success' ? 'Operación Exitosa' : 'Atención',
+        mensaje,
+    };
+    progresoPorcentaje.value = 100;
+
+    const inicio = Date.now();
+    animacionIntervalo = setInterval(() => {
+        const transcurrido = Date.now() - inicio;
+        const restante = Math.max(0, DURACION_MS - transcurrido);
+        progresoPorcentaje.value = (restante / DURACION_MS) * 100;
+        if (restante <= 0 && animacionIntervalo) {
+            clearInterval(animacionIntervalo);
+        }
+    }, 50);
+
+    timerNotificacion = setTimeout(() => {
+        cerrarNotificacion();
+    }, DURACION_MS);
+}
+
+// Observar cada respuesta/navegación de Inertia mediante router.on('finish')
+// para que el modal se dispare SIEMPRE en cada acción (incluso si el mensaje es idéntico al anterior)
+router.on('finish', () => {
+    const flashProps = (page.props.flash as any) || {};
+    if (flashProps.success) {
+        dispararNotificacion('success', String(flashProps.success));
+    } else if (flashProps.error) {
+        dispararNotificacion('error', String(flashProps.error));
+    }
+});
+
+// También escuchar en carga inicial directa si ya viene con mensaje flash
+if (flash.value.success) {
+    dispararNotificacion('success', String(flash.value.success));
+} else if (flash.value.error) {
+    dispararNotificacion('error', String(flash.value.error));
+}
 </script>
 
 <template>
@@ -491,7 +555,7 @@ const HABILITAR_MODULO_AUDITORIA_EMPRESA = false;
                             href="/configuracion/auditoria"
                             :class="[
                                 'group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition',
-                                page.url.startsWith('/configuracion/auditoria')
+                                page.url.startsWith('/configuracion/auditoria') || page.url.startsWith('/empresa/auditoria')
                                     ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                             ]"
@@ -672,41 +736,86 @@ const HABILITAR_MODULO_AUDITORIA_EMPRESA = false;
                 </div>
             </header>
 
-            <!-- Mensajes de Notificación Flash -->
-            <div class="px-4 sm:px-8 pt-6" v-if="flash.success || flash.error">
-                <div
-                    v-if="flash.success"
-                    class="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50/90 p-4 text-sm text-emerald-900 shadow-xs"
-                >
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <span class="font-medium">{{ flash.success }}</span>
-                    </div>
-                </div>
-
-                <div
-                    v-if="flash.error"
-                    class="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50/90 p-4 text-sm text-rose-900 shadow-xs"
-                >
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-100 text-rose-700">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <span class="font-medium">{{ flash.error }}</span>
-                    </div>
-                </div>
-            </div>
-
             <!-- Contenido dinámico inyectado por las vistas de Inertia -->
             <main class="flex-1 px-4 sm:px-8 py-6">
                 <slot />
             </main>
         </div>
+
+        <!-- Modal / Toast Emergente con Botón OK y Línea de Tiempo Automática -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transform transition ease-out duration-300"
+                enter-from-class="opacity-0 translate-y-3 sm:translate-y-4 scale-95"
+                enter-to-class="opacity-100 translate-y-0 scale-100"
+                leave-active-class="transform transition ease-in duration-200"
+                leave-from-class="opacity-100 translate-y-0 scale-100"
+                leave-to-class="opacity-0 translate-y-3 sm:translate-y-4 scale-95"
+            >
+                <div
+                    v-if="notificacionActiva"
+                    class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-2xs"
+                    @click.self="cerrarNotificacion"
+                >
+                    <div
+                        class="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl border border-slate-100 transition-all text-center"
+                    >
+                        <!-- Cabecera e Ícono -->
+                        <div class="p-6 pb-5 flex flex-col items-center">
+                            <!-- Ícono de Éxito o Alerta -->
+                            <div
+                                v-if="notificacionActiva.tipo === 'success'"
+                                class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-8 ring-emerald-50/50 mb-3.5"
+                            >
+                                <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div
+                                v-else
+                                class="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 ring-8 ring-rose-50/50 mb-3.5"
+                            >
+                                <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+
+                            <h3 class="text-base font-bold text-slate-900">
+                                {{ notificacionActiva.titulo }}
+                            </h3>
+
+                            <p class="mt-2 text-xs font-medium text-slate-600 leading-relaxed max-w-xs">
+                                {{ notificacionActiva.mensaje }}
+                            </p>
+
+                            <!-- Botón OK -->
+                            <button
+                                type="button"
+                                @click="cerrarNotificacion"
+                                :class="[
+                                    'mt-5 w-full cursor-pointer rounded-xl py-2.5 px-4 text-xs font-bold text-white shadow-md transition',
+                                    notificacionActiva.tipo === 'success'
+                                        ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20'
+                                        : 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20'
+                                ]"
+                            >
+                                Entendido (OK)
+                            </button>
+                        </div>
+
+                        <!-- Línea de Tiempo de Desaparición Automática -->
+                        <div class="h-1.5 w-full bg-slate-100 overflow-hidden">
+                            <div
+                                :class="[
+                                    'h-full transition-all duration-75 ease-linear',
+                                    notificacionActiva.tipo === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
+                                ]"
+                                :style="{ width: `${progresoPorcentaje}%` }"
+                            ></div>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
     </div>
 </template>

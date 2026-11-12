@@ -37,6 +37,7 @@ return [
 
     'api' => [
         'public_enabled' => env('API_PUBLICA_HABILITADA', false),
+        'key' => env('API_KEY'),
     ],
 
 ];

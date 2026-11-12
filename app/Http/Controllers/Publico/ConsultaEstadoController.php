@@ -140,10 +140,14 @@ class ConsultaEstadoController extends Controller
     }
 
     /**
-     * Descarga la constancia en PDF validando que la solicitud provenga de un enlace firmado o token vigente.
+     * Descarga la constancia en PDF validando que la solicitud provenga de un enlace firmado temporal vigente.
      */
     public function descargarPdfFirmado(Request $request, string $slug, string $token, PdfConstanciaService $pdfService): HttpResponse
     {
+        if (! $request->hasValidSignature()) {
+            abort(403, 'El enlace de descarga de la constancia ha expirado o es inválido por motivos de seguridad y protección de datos personales. Por favor genera un nuevo enlace desde la consulta de estado.');
+        }
+
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
 
@@ -195,7 +199,7 @@ class ConsultaEstadoController extends Controller
             'estado' => $reclamacion->estado->value,
             'estado_label' => ucfirst($reclamacion->estado->value),
             'fecha_hora' => $reclamacion->fecha_hora?->format('d/m/Y H:i:s') ?? now()->format('d/m/Y H:i:s'),
-            'vence_en' => $reclamacion->vence_en?->format('d/m/Y') ?? now()->addWeekdays(15)->format('d/m/Y'),
+            'vence_en' => $reclamacion->vence_en?->format('d/m/Y') ?? '',
             'consumidor_nombre' => $nombreCompleto,
             'consumidor_email' => $emailEnmascarado,
             'consumidor_documento' => strtoupper($consumidor['tipo_documento'] ?? 'DNI').': '.$this->enmascararDocumento($consumidor['numero_documento'] ?? ''),
@@ -204,7 +208,7 @@ class ConsultaEstadoController extends Controller
             'token_consulta' => $reclamacion->token_consulta,
             'adjuntos_count' => $reclamacion->adjuntos_count ?? 0,
             'respuesta' => $respuestaData,
-            'url_descarga_pdf' => route('libro.constancia.pdf', [
+            'url_descarga_pdf' => URL::temporarySignedRoute('libro.constancia.pdf', now()->addHours(2), [
                 'slug' => $empresa->slug,
                 'token' => $reclamacion->token_consulta,
             ]),

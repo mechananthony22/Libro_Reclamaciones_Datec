@@ -77,7 +77,10 @@ class LoginController extends Controller
         }
 
         // 2. Administrador / Gestor de Empresa: Establecer empresa activa y redirigir a su configuración/gestión
-        $primeraEmpresa = $user->empresas()->wherePivot('activo', true)->first();
+        $primeraEmpresa = $user->empresas()
+            ->wherePivot('activo', true)
+            ->where('tenants.activo', true)
+            ->first();
 
         if ($primeraEmpresa) {
             session(['current_tenant_id' => $primeraEmpresa->id]);
@@ -94,8 +97,12 @@ class LoginController extends Controller
                 ->with('success', "Bienvenido al panel de administración de {$primeraEmpresa->name}.");
         }
 
-        // Usuario registrado sin asignación activa a empresas
+        // Usuario registrado sin asignación activa a empresas: cerrar sesión para no dejar estado autenticado fantasma
+        Auth::guard('web')->logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+
         return redirect()->route('login')
-            ->withErrors(['email' => 'Tu cuenta no tiene ninguna empresa asociada activa actualmente.']);
+            ->withErrors(['email' => 'Esta cuenta no se encuentra registrada en ninguna empresa activa o fue dada de baja.']);
     }
 }

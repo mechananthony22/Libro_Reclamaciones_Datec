@@ -36,11 +36,13 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
                 'empresa_actual' => fn () => Empresa::current() ? [
                     'id' => Empresa::current()->id,
                     'name' => Empresa::current()->name,
@@ -48,15 +50,18 @@ class HandleInertiaRequests extends Middleware
                     'color_primario' => Empresa::current()->color_primario,
                     'logo_path' => Empresa::current()->logo_path,
                 ] : null,
-                'empresas_usuario' => fn () => $request->user() ? ($request->user()->isSuperAdmin()
+                'empresas_usuario' => fn () => $user ? ($user->isSuperAdmin()
                     ? Empresa::select('id', 'name', 'slug', 'color_primario', 'logo_path')->get()
-                    : $request->user()->empresas()->wherePivot('activo', true)->select('tenants.id', 'tenants.name', 'tenants.slug', 'tenants.color_primario', 'tenants.logo_path')->get()
+                    : $user->empresas()->wherePivot('activo', true)->where('tenants.activo', true)->select('tenants.id', 'tenants.name', 'tenants.slug', 'tenants.color_primario', 'tenants.logo_path')->get()
                 ) : [],
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+                'codigo_enviado' => fn () => $request->session()->get('codigo_enviado'),
                 'invitacion_url' => fn () => $request->session()->get('invitacion_url'),
+                'invitacion_email' => fn () => $request->session()->get('invitacion_email'),
+                'invitacion_empresa' => fn () => $request->session()->get('invitacion_empresa'),
             ],
         ];
     }

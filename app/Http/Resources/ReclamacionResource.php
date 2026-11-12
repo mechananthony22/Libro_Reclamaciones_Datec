@@ -36,19 +36,32 @@ class ReclamacionResource extends JsonResource
             'fecha_hora' => $this->fecha_hora?->toIso8601String(),
             'consumidor' => [
                 'tipo_documento' => $consumidor['tipo_documento'] ?? null,
-                'numero_documento' => $consumidor['numero_documento'] ?? null,
+                'numero_documento' => $this->enmascararDocumento($consumidor['numero_documento'] ?? null),
                 'nombres' => $consumidor['nombres'] ?? null,
-                'apellidos' => $consumidor['apellidos'] ?? null,
-                'email' => $consumidor['email'] ?? null,
-                'telefono' => $consumidor['telefono'] ?? null,
             ],
             'establecimiento' => $this->whenLoaded('establecimiento', fn () => [
                 'id' => $this->establecimiento->id,
                 'codigo' => $this->establecimiento->codigo,
                 'nombre' => $this->establecimiento->nombre,
             ]),
-            'token_consulta' => $this->token_consulta,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Enmascara el número de documento de identidad mostrando solo los últimos dígitos.
+     */
+    protected function enmascararDocumento(?string $documento): ?string
+    {
+        if (! $documento) {
+            return null;
+        }
+
+        $len = strlen($documento);
+        if ($len <= 4) {
+            return $documento;
+        }
+
+        return str_repeat('*', $len - 3).substr($documento, -3);
     }
 }

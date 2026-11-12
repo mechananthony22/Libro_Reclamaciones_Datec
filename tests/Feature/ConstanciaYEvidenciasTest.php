@@ -13,6 +13,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 test('despues del registro se muestra la confirmacion oficial con correlativo y enlace a PDF', function () {
     $empresa = Empresa::create([
@@ -100,15 +101,32 @@ test('permite la descarga del PDF oficial de la constancia de reclamacion', func
 
     $reclamacion = Reclamacion::where('empresa_id', $empresa->id)->first();
 
-    $responsePdf = $this->get(route('libro.constancia.pdf', [
+    // 1. Acceso sin firma o con token directo no firmado debe ser rechazado con 403 Forbidden
+    $responseSinFirma = $this->get(route('libro.constancia.pdf', [
         'slug' => $empresa->slug,
         'token' => $reclamacion->token_consulta,
     ]));
+    $responseSinFirma->assertForbidden();
 
+    // 2. Acceso con enlace firmado temporal válido debe responder 200 OK con el PDF
+    $urlFirmada = URL::temporarySignedRoute('libro.constancia.pdf', now()->addMinutes(15), [
+        'slug' => $empresa->slug,
+        'token' => $reclamacion->token_consulta,
+    ]);
+
+    $responsePdf = $this->get($urlFirmada);
     $responsePdf->assertOk();
     $responsePdf->assertHeader('content-type', 'application/pdf');
     expect($responsePdf->headers->get('content-disposition'))->toContain('attachment');
     expect($responsePdf->headers->get('content-disposition'))->toContain($reclamacion->numero_hoja);
+
+    // 3. Acceso con enlace firmado vencido debe ser rechazado con 403 Forbidden
+    $urlExpirada = URL::temporarySignedRoute('libro.constancia.pdf', now()->subMinute(), [
+        'slug' => $empresa->slug,
+        'token' => $reclamacion->token_consulta,
+    ]);
+    $responseExpirada = $this->get($urlExpirada);
+    $responseExpirada->assertForbidden();
 });
 
 test('despacha el envio del correo transaccional de constancia al consumidor de forma asincrona', function () {

@@ -184,7 +184,7 @@ const HABILITAR_COLUMNA_RESPONSABLE = false;
                             Bandeja de Reclamaciones y Quejas
                         </h1>
                         <p class="mt-1 text-sm text-slate-500">
-                            Control y seguimiento oficial de expedientes conforme a la Ley N° 29571 y plazos de INDECOPI.
+                            Control y seguimiento oficial de expedientes 
                         </p>
                     </div>
                 </div>

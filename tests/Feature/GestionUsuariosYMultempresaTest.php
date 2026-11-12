@@ -4,6 +4,7 @@ use App\Enums\EstadoEmpresa;
 use App\Enums\PlanEmpresa;
 use App\Enums\RolEmpresa;
 use App\Models\Empresa;
+use App\Models\InvitacionEmpresa;
 use App\Models\User;
 
 test('el administrador empresarial puede invitar un usuario a su empresa', function () {
@@ -179,4 +180,83 @@ test('no se puede cambiar a una empresa donde el usuario no tiene membresia acti
             'empresa_id' => $empresaAjena->id,
         ])
         ->assertForbidden();
+});
+
+test('aceptar invitacion de admin_empresa reemplaza al administrador anterior y no deja cuentas duplicadas', function () {
+    $empresa = Empresa::create([
+        'name' => 'Empresa Test Reemplazo',
+        'slug' => 'empresa-test-reemplazo',
+        'razon_social' => 'Empresa Test Reemplazo S.A.C.',
+        'ruc' => '20888888888',
+        'estado' => EstadoEmpresa::Activa,
+        'plan' => PlanEmpresa::Basico,
+        'activo' => true,
+    ]);
+
+    $adminAntiguo = User::factory()->create([
+        'email' => 'admin.antiguo@ejemplo.com',
+        'name' => 'Admin Antiguo',
+    ]);
+    $empresa->usuarios()->attach($adminAntiguo->id, ['rol' => RolEmpresa::AdminEmpresa->value, 'activo' => true]);
+
+    $invitacion = InvitacionEmpresa::generarPara(
+        empresa: $empresa,
+        email: 'admin.nuevo@ejemplo.com',
+        nombre: 'Admin Nuevo',
+        rol: RolEmpresa::AdminEmpresa,
+        horasExpiracion: 72
+    );
+
+    $response = $this->post(route('invitacion.store', ['token' => $invitacion->token]), [
+        'name' => 'Admin Nuevo Oficial',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ]);
+
+    $response->assertRedirect(route('login'));
+
+    // Debe existir el nuevo usuario como único admin
+    $this->assertDatabaseHas('users', ['email' => 'admin.nuevo@ejemplo.com']);
+    // El admin antiguo ya no debe existir si era su única empresa
+    $this->assertDatabaseMissing('users', ['email' => 'admin.antiguo@ejemplo.com']);
+
+    // La empresa solo debe tener 1 administrador
+    expect($empresa->usuarios()->wherePivot('rol', RolEmpresa::AdminEmpresa->value)->count())->toBe(1);
+    expect($empresa->fresh()->email)->toBe('admin.nuevo@ejemplo.com');
+});
+
+test('el administrador empresarial puede reenviar una invitacion renovando el token sin error 500', function () {
+    $empresa = Empresa::create([
+        'name' => 'Empresa Reenvio',
+        'slug' => 'empresa-reenvio',
+        'razon_social' => 'Empresa Reenvio S.A.C.',
+        'ruc' => '20888888889',
+        'estado' => EstadoEmpresa::Activa,
+        'plan' => PlanEmpresa::Basico,
+        'activo' => true,
+    ]);
+
+    $admin = User::factory()->create();
+    $empresa->usuarios()->attach($admin->id, ['rol' => RolEmpresa::AdminEmpresa->value, 'activo' => true]);
+
+    $invitacion = InvitacionEmpresa::generarPara(
+        empresa: $empresa,
+        email: 'soporte.invitado@ejemplo.pe',
+        nombre: 'Invitado',
+        rol: RolEmpresa::AdminEmpresa,
+        horasExpiracion: 1
+    );
+
+    $oldToken = $invitacion->token;
+
+    $this->actingAs($admin)
+        ->withSession(['current_tenant_id' => $empresa->id])
+        ->post(route('empresa.usuarios.invitaciones.reenviar', $invitacion))
+        ->assertRedirect()
+        ->assertSessionHas('success')
+        ->assertSessionHas('invitacion_url');
+
+    $invitacion->refresh();
+    expect($invitacion->token)->not->toBe($oldToken);
+    expect($invitacion->expires_at->isFuture())->toBeTrue();
 });

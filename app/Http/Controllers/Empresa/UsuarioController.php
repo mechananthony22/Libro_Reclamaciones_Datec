@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\AuditoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -116,6 +117,10 @@ class UsuarioController extends Controller
             return back()->withErrors(['email' => 'El usuario ya es un miembro activo de esta empresa.']);
         }
 
+        InvitacionEmpresa::where('empresa_id', $empresa->id)
+            ->where('email', $email)
+            ->delete();
+
         $invitacion = InvitacionEmpresa::generarPara(
             empresa: $empresa,
             email: $email,
@@ -135,7 +140,9 @@ class UsuarioController extends Controller
 
         return back()
             ->with('success', "Invitación creada para {$invitacion->email} con rol \"{$rol->label()}\".")
-            ->with('invitacion_url', $enlace);
+            ->with('invitacion_url', $enlace)
+            ->with('invitacion_email', $invitacion->email)
+            ->with('invitacion_empresa', $empresa->name);
     }
 
     /**
@@ -238,23 +245,28 @@ class UsuarioController extends Controller
             abort(403, 'Invitación no autorizada.');
         }
 
-        $invitacion->update([
-            'token' => Str::random(48),
-            'expires_at' => now()->addHours(72),
-        ]);
+        DB::transaction(function () use ($invitacion, $empresa) {
+            $invitacion->update([
+                'token' => Str::random(48),
+                'expires_at' => now()->addHours(72),
+                'accepted_at' => null,
+            ]);
+
+            app(AuditoriaService::class)->registrar(
+                'usuario_invitado',
+                'usuarios',
+                "Invitación renovada para {$invitacion->email} con rol \"{$invitacion->rol->label()}\"",
+                ['empresa_id' => $empresa->id, 'datos_despues' => ['email' => $invitacion->email, 'rol' => $invitacion->rol->value]]
+            );
+        });
 
         $enlace = route('invitacion.show', ['token' => $invitacion->token]);
 
-        app(AuditoriaService::class)->registrar(
-            'usuario_invitado',
-            'usuarios',
-            "Invitación generada para {$invitacion->email} con rol \"{$rol->label()}\"",
-            ['empresa_id' => $empresa->id, 'datos_despues' => ['email' => $email, 'rol' => $rol->value]]
-        );
-
         return back()
             ->with('success', "Enlace de activación renovado por 72 horas para {$invitacion->email}.")
-            ->with('invitacion_url', $enlace);
+            ->with('invitacion_url', $enlace)
+            ->with('invitacion_email', $invitacion->email)
+            ->with('invitacion_empresa', $empresa->name);
     }
 
     /**

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\EstadoEmpresa;
+use App\Enums\EstadoReclamacion;
 use App\Enums\PlanEmpresa;
 use App\Enums\TipoBien;
 use App\Enums\TipoDocumentoConsumidor;
@@ -9,6 +10,7 @@ use App\Models\Empresa;
 use App\Models\Establecimiento;
 use App\Models\Reclamacion;
 use App\Services\CorrelativoService;
+use App\Services\PlazoReclamacionService;
 
 test('el formulario publico responde sin necesidad de iniciar sesion e identifica al proveedor', function () {
     $empresa = Empresa::create([
@@ -475,4 +477,71 @@ test('aplica limitacion de tasa rate limiting para bloquear intentos masivos con
     // La 6ta petición dentro del mismo minuto debe recibir código 429 Too Many Requests
     $responseExceso = $this->post(route('libro.registrar', ['slug' => $empresa->slug]), $payloadBase);
     $responseExceso->assertStatus(429);
+});
+
+test('calcula y persiste vence_en exactamente a 15 dias habiles segun la Ley N 29571 y Ley N 31435', function () {
+    $empresa = Empresa::create([
+        'name' => 'Empresa Plazo Legal',
+        'slug' => 'empresa-plazo-legal',
+        'razon_social' => 'Plazo Legal S.A.C.',
+        'ruc' => '20192837465',
+        'direccion' => 'Av. Javier Prado 500, San Isidro',
+        'estado' => EstadoEmpresa::Activa,
+        'plan' => PlanEmpresa::Basico,
+        'activo' => true,
+    ]);
+
+    $tokenValido = encrypt(now()->subSeconds(10)->timestamp);
+
+    $payload = [
+        'tipo_documento' => TipoDocumentoConsumidor::DNI->value,
+        'numero_documento' => '77889900',
+        'nombres' => 'Valeria',
+        'apellidos' => 'Torres',
+        'email' => 'valeria.torres@ejemplo.pe',
+        'telefono' => '998877665',
+        'direccion' => 'Calle Los Nogales 200',
+        'es_menor_edad' => false,
+        'tipo_bien' => TipoBien::Producto->value,
+        'descripcion_bien' => 'Laptop Gamer',
+        'tipo' => TipoReclamacion::Reclamo->value,
+        'detalle_problema' => 'Equipo no enciende tras 24 horas de uso.',
+        'pedido_consumidor' => 'Cambio de equipo o devolución de dinero.',
+        'aviso_privacidad_leido' => true,
+        'token_seguridad' => $tokenValido,
+    ];
+
+    $response = $this->post(route('libro.registrar', ['slug' => $empresa->slug]), $payload);
+
+    $reclamacion = Reclamacion::where('empresa_id', $empresa->id)->first();
+    expect($reclamacion)->not->toBeNull();
+    expect($reclamacion->vence_en)->not->toBeNull();
+
+    $plazoService = app(PlazoReclamacionService::class);
+    $fechaEsperada = $plazoService->calcularFechaVencimiento($reclamacion->fecha_hora, 15);
+
+    expect($reclamacion->vence_en->toDateString())->toBe($fechaEsperada->toDateString());
+    // Asegurar que no sea simplemente +15 días calendario
+    expect($reclamacion->vence_en->toDateString())->not->toBe($reclamacion->fecha_hora->copy()->addDays(15)->toDateString());
+
+    // Verificar además que el hook de Reclamacion::creating asigna vence_en si se crea directamente
+    $reclamacionDirecta = Reclamacion::create([
+        'empresa_id' => $empresa->id,
+        'numero_hoja' => 'TEST-0001',
+        'tipo' => TipoReclamacion::Queja,
+        'tipo_bien' => TipoBien::Servicio,
+        'descripcion_bien' => 'Servicio directo',
+        'detalle_problema' => 'Problema directo',
+        'pedido_consumidor' => 'Solución directa',
+        'aviso_privacidad_leido' => true,
+        'aviso_privacidad_version' => '1.0',
+        'aviso_privacidad_aceptado_en' => now(),
+        'datos_consumidor' => ['nombres' => 'Directo', 'apellidos' => 'Prueba'],
+        'datos_legales_snapshot' => ['razon_social' => 'Plazo Legal S.A.C.', 'ruc' => '20192837465'],
+        'estado' => EstadoReclamacion::Pendiente,
+        'fecha_hora' => now(),
+    ]);
+
+    expect($reclamacionDirecta->vence_en)->not->toBeNull();
+    expect($reclamacionDirecta->vence_en->toDateString())->toBe($fechaEsperada->toDateString());
 });

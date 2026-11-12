@@ -178,6 +178,7 @@ test('cuando la API se habilita para la fase F2 procesa el registro y retorna el
         'descripcion_bien' => 'Atención farmacéutica en caja',
         'detalle_problema' => 'Mala atención del personal encargado.',
         'pedido_consumidor' => 'Capacitación en trato al usuario.',
+        'aviso_privacidad' => true,
     ]);
 
     $response->assertStatus(201)
@@ -193,9 +194,9 @@ test('cuando la API se habilita para la fase F2 procesa el registro y retorna el
                     'numero_documento',
                     'nombres',
                 ],
-                'token_consulta',
             ],
         ]);
+    expect($response->json('data.token_consulta'))->toBeNull();
 });
 
 test('cuando la API se habilita permite consultar el estado del expediente mediante caso de uso desacoplado', function () {
@@ -246,4 +247,105 @@ test('la API rechaza solicitudes con HTTP 503 si la empresa se encuentra en modo
         ->assertJson([
             'error' => 'portal_en_contingencia',
         ]);
+});
+
+test('la API rechaza registro si no se acepta el aviso de privacidad', function () {
+    Config::set('services.api.public_enabled', true);
+
+    $response = $this->postJson('/api/v1/farmaceutica-nacional/reclamaciones', [
+        'establecimiento_id' => $this->establecimiento->id,
+        'tipo_documento' => 'dni',
+        'numero_documento' => '77665544',
+        'nombres' => 'Manuel',
+        'email' => 'manuel.torres@gmail.com',
+        'telefono' => '998877665',
+        'direccion' => 'Av. Javier Prado 100',
+        'tipo' => 'reclamo',
+        'tipo_bien' => 'servicio',
+        'descripcion_bien' => 'Atención',
+        'detalle_problema' => 'Problema reportado con suficiente detalle.',
+        'pedido_consumidor' => 'Solución',
+        // Falta aviso_privacidad
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['aviso_privacidad']);
+});
+
+test('la API rechaza establecimiento perteneciente a otro tenant', function () {
+    Config::set('services.api.public_enabled', true);
+
+    $otraEmpresa = Empresa::create([
+        'name' => 'Otra Empresa SAC',
+        'razon_social' => 'OTRA EMPRESA S.A.C.',
+        'ruc' => '20999999999',
+        'slug' => 'otra-empresa',
+        'estado' => EstadoEmpresa::Activa,
+        'activo' => true,
+        'plan' => PlanEmpresa::Basico,
+    ]);
+
+    $sedeAjena = Establecimiento::create([
+        'empresa_id' => $otraEmpresa->id,
+        'codigo' => 'OTRA-01',
+        'nombre' => 'Sede Ajena',
+        'direccion' => 'Calle Ajena 123',
+        'activo' => true,
+    ]);
+
+    $response = $this->postJson('/api/v1/farmaceutica-nacional/reclamaciones', [
+        'establecimiento_id' => $sedeAjena->id, // Pertenece a otra empresa
+        'tipo_documento' => 'dni',
+        'numero_documento' => '77665544',
+        'nombres' => 'Manuel',
+        'email' => 'manuel@gmail.com',
+        'telefono' => '998877665',
+        'direccion' => 'Av. Javier Prado 100',
+        'tipo' => 'reclamo',
+        'tipo_bien' => 'servicio',
+        'descripcion_bien' => 'Atención',
+        'detalle_problema' => 'Problema reportado con suficiente detalle.',
+        'pedido_consumidor' => 'Solución',
+        'aviso_privacidad' => true,
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['establecimiento_id']);
+});
+
+test('la API rechaza solicitudes si la empresa se encuentra inactiva', function () {
+    Config::set('services.api.public_enabled', true);
+    $this->empresa->update(['activo' => false]);
+
+    $response = $this->postJson('/api/v1/farmaceutica-nacional/reclamaciones', [
+        'tipo' => 'reclamo',
+    ]);
+
+    $response->assertStatus(403);
+
+    $responseEstablecimientos = $this->getJson('/api/v1/farmaceutica-nacional/establecimientos');
+    $responseEstablecimientos->assertStatus(403);
+});
+
+test('la API exige API Key si se encuentra configurada en el sistema', function () {
+    Config::set('services.api.public_enabled', true);
+    Config::set('services.api.key', 'secret-api-key-12345');
+
+    // Sin cabecera
+    $response = $this->postJson('/api/v1/farmaceutica-nacional/reclamaciones', [
+        'tipo' => 'reclamo',
+    ]);
+    $response->assertStatus(401);
+
+    // Con cabecera incorrecta
+    $responseInvalida = $this->withHeaders(['X-API-Key' => 'clave-erronea'])
+        ->postJson('/api/v1/farmaceutica-nacional/reclamaciones', [
+            'tipo' => 'reclamo',
+        ]);
+    $responseInvalida->assertStatus(401);
+
+    // Con cabecera correcta
+    $responseValida = $this->withHeaders(['X-API-Key' => 'secret-api-key-12345'])
+        ->getJson('/api/v1/farmaceutica-nacional/establecimientos');
+    $responseValida->assertOk();
 });

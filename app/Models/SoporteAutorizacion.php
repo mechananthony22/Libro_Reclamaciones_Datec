@@ -30,6 +30,9 @@ class SoporteAutorizacion extends Model
         'valido_hasta',
         'revocado_en',
         'motivo_revocacion',
+        'finalizado_en',
+        'resolucion_detalle',
+        'finalizado_por_id',
     ];
 
     /**
@@ -42,6 +45,7 @@ class SoporteAutorizacion extends Model
             'autorizado_en' => 'datetime',
             'valido_hasta' => 'datetime',
             'revocado_en' => 'datetime',
+            'finalizado_en' => 'datetime',
         ];
     }
 
@@ -67,6 +71,14 @@ class SoporteAutorizacion extends Model
     public function autorizadoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'autorizado_por_id');
+    }
+
+    /**
+     * Usuario que finalizó o resolvió el ticket de soporte técnico.
+     */
+    public function finalizadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'finalizado_por_id');
     }
 
     /**
@@ -104,6 +116,20 @@ class SoporteAutorizacion extends Model
     }
 
     /**
+     * Finaliza o marca como resuelto el ticket de soporte técnico.
+     */
+    public function finalizar(User $finalizador, ?string $resolucion = null): void
+    {
+        $this->update([
+            'estado' => 'finalizado',
+            'finalizado_en' => now(),
+            'resolucion_detalle' => $resolucion ?: 'Soporte técnico concluido satisfactoriamente.',
+            'finalizado_por_id' => $finalizador->id,
+            'valido_hasta' => now(), // Cierra el acceso delegado de inmediato
+        ]);
+    }
+
+    /**
      * Revoca anticipadamente el acceso delegado.
      */
     public function revocar(string $motivo = 'Revocado por el administrador de la empresa'): void
@@ -112,6 +138,7 @@ class SoporteAutorizacion extends Model
             'estado' => 'revocado',
             'revocado_en' => now(),
             'motivo_revocacion' => $motivo,
+            'valido_hasta' => now(), // Cierra el acceso delegado de inmediato
         ]);
     }
 }

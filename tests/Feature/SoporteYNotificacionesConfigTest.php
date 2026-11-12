@@ -275,3 +275,47 @@ test('alerta de plazo legal vencido permanece obligatoriamente activa ante cualq
     $this->empresaA->refresh();
     expect($this->empresaA->notificar_vencido)->toBeTrue();
 });
+
+test('superadministrador sin autorizacion de soporte activa no puede modificar expedientes de otra empresa', function () {
+    // El superadmin puede ver el expediente
+    $this->actingAs($this->superadmin)
+        ->withSession(['current_tenant_id' => $this->empresaA->id])
+        ->get("/expedientes/{$this->reclamacionA->id}")
+        ->assertOk();
+
+    // Pero no puede modificarlo (cambiar estado)
+    $this->actingAs($this->superadmin)
+        ->withSession(['current_tenant_id' => $this->empresaA->id])
+        ->patch("/expedientes/{$this->reclamacionA->id}/estado", [
+            'estado' => EstadoReclamacion::EnTramite->value,
+            'motivo' => 'Intento de cambio sin ticket',
+        ])
+        ->assertForbidden();
+
+    expect($this->reclamacionA->fresh()->estado)->toBe(EstadoReclamacion::Pendiente);
+});
+
+test('superadministrador con autorizacion de soporte activa si puede modificar expedientes de otra empresa', function () {
+    SoporteAutorizacion::create([
+        'empresa_id' => $this->empresaA->id,
+        'codigo_ticket' => 'TCK-20261106-9999',
+        'titulo' => 'Asistencia autorizada para corregir estado',
+        'motivo' => 'Soporte técnico autorizado',
+        'solicitado_por_id' => $this->superadmin->id,
+        'autorizado_por_id' => $this->adminAlfa->id,
+        'estado' => 'autorizado',
+        'horas_vigencia' => 24,
+        'autorizado_en' => Carbon::now()->subHour(),
+        'valido_hasta' => Carbon::now()->addHours(23),
+    ]);
+
+    $this->actingAs($this->superadmin)
+        ->withSession(['current_tenant_id' => $this->empresaA->id])
+        ->patch("/expedientes/{$this->reclamacionA->id}/estado", [
+            'estado' => EstadoReclamacion::EnTramite->value,
+            'motivo' => 'Cambio asistido por soporte',
+        ])
+        ->assertRedirect();
+
+    expect($this->reclamacionA->fresh()->estado)->toBe(EstadoReclamacion::EnTramite);
+});

@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\SalidaClienteController;
 use App\Http\Controllers\Admin\SoporteController as AdminSoporteController;
 use App\Http\Controllers\Auth\AceptarInvitacionController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RecuperarPasswordController;
 use App\Http\Controllers\Empresa\AuditoriaController as EmpresaAuditoriaController;
 use App\Http\Controllers\Empresa\CambiarEmpresaController;
 use App\Http\Controllers\Empresa\ContingenciaController as EmpresaContingenciaController;
@@ -32,6 +33,12 @@ Route::inertia('/', 'Welcome')->name('home');
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('login', [LoginController::class, 'login']);
+
+    // Recuperación y restablecimiento de contraseña mediante código por correo
+    Route::post('password/enviar-codigo', [RecuperarPasswordController::class, 'enviarCodigo'])
+        ->name('password.enviar-codigo');
+    Route::post('password/restablecer', [RecuperarPasswordController::class, 'restablecer'])
+        ->name('password.restablecer');
 });
 
 Route::post('logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
@@ -75,6 +82,8 @@ Route::prefix('admin')->name('admin.')->middleware(['superadmin'])->group(functi
         ->name('soporte.index');
     Route::post('soporte/solicitar', [AdminSoporteController::class, 'solicitar'])
         ->name('soporte.solicitar');
+    Route::patch('soporte/{id}/finalizar', [AdminSoporteController::class, 'finalizar'])
+        ->name('soporte.finalizar');
 
     // Supervisión Centralizada de Contingencias y Ensayos
     Route::get('contingencia', [AdminContingenciaController::class, 'index'])
@@ -147,9 +156,15 @@ Route::middleware(['tenant.access'])->group(function () {
     Route::delete('configuracion/usuarios/invitaciones/{invitacion}', [UsuarioController::class, 'cancelarInvitacion'])
         ->name('empresa.usuarios.invitaciones.cancelar');
 
-    // Historial de Auditoría del Tenant
+    // Historial de Auditoría del Tenant (Aislamiento estricto por empresa)
     Route::get('configuracion/auditoria', [EmpresaAuditoriaController::class, 'index'])
         ->name('empresa.auditoria.index');
+    Route::get('configuracion/auditoria/exportar', [EmpresaAuditoriaController::class, 'exportar'])
+        ->name('empresa.auditoria.exportar');
+    Route::get('empresa/auditoria', [EmpresaAuditoriaController::class, 'index'])
+        ->name('empresa.auditoria.alias');
+    Route::get('empresa/auditoria/exportar', [EmpresaAuditoriaController::class, 'exportar'])
+        ->name('empresa.auditoria.alias.exportar');
 
     // Configuración de Destinatarios y Alertas de Notificación
     Route::get('configuracion/notificaciones', [NotificacionConfigController::class, 'edit'])
@@ -164,6 +179,8 @@ Route::middleware(['tenant.access'])->group(function () {
         ->name('empresa.soporte.store');
     Route::patch('configuracion/soporte/{id}/autorizar', [EmpresaSoporteController::class, 'autorizar'])
         ->name('empresa.soporte.autorizar');
+    Route::patch('configuracion/soporte/{id}/finalizar', [EmpresaSoporteController::class, 'finalizar'])
+        ->name('empresa.soporte.finalizar');
     Route::patch('configuracion/soporte/{id}/revocar', [EmpresaSoporteController::class, 'revocar'])
         ->name('empresa.soporte.revocar');
 

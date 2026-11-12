@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 
 interface LogItem {
@@ -48,6 +48,16 @@ const formFiltros = ref({
 });
 
 const modalDetalle = ref<LogItem | null>(null);
+
+const urlExportacion = computed(() => {
+    const params = new URLSearchParams();
+    if (formFiltros.value.modulo) params.set('modulo', formFiltros.value.modulo);
+    if (formFiltros.value.buscar) params.set('buscar', formFiltros.value.buscar);
+    if (formFiltros.value.fecha_desde) params.set('fecha_desde', formFiltros.value.fecha_desde);
+    if (formFiltros.value.fecha_hasta) params.set('fecha_hasta', formFiltros.value.fecha_hasta);
+    const qs = params.toString();
+    return `/configuracion/auditoria/exportar${qs ? '?' + qs : ''}`;
+});
 
 let timeoutBusqueda: any = null;
 
@@ -126,6 +136,15 @@ function obtenerClaseModulo(modulo: string): string {
                 </div>
 
                 <div class="flex items-center gap-2">
+                    <a
+                        :href="urlExportacion"
+                        class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 active:scale-95"
+                    >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>Exportar CSV</span>
+                    </a>
                     <span class="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs">
                         <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
                         <span>{{ logs.total }} eventos auditados</span>

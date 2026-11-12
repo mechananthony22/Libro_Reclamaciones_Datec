@@ -158,9 +158,6 @@ const claseCampo =
                             <h2 class="text-sm font-bold" :class="tieneMinimos ? 'text-emerald-950' : 'text-amber-950'">
                                 {{ tieneMinimos ? 'Requisitos Legales Mínimos Completos' : 'Requisitos Legales Mínimos Pendientes' }}
                             </h2>
-                            <p class="text-xs" :class="tieneMinimos ? 'text-emerald-700' : 'text-amber-800'">
-                                {{ tieneMinimos ? 'Tu empresa cuenta con toda la información fiscal exigida por INDECOPI para operar válidamente.' : 'Debes completar los datos señalados abajo para que tu Libro esté 100% habilitado.' }}
-                            </p>
                         </div>
                     </div>
 

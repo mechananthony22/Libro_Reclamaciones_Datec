@@ -1,14 +1,21 @@
 <?php
 
+use App\Enums\DecisionRespuesta;
 use App\Enums\EstadoEmpresa;
+use App\Enums\EstadoReclamacion;
 use App\Enums\PlanEmpresa;
 use App\Enums\RolEmpresa;
+use App\Enums\TipoBien;
+use App\Enums\TipoReclamacion;
 use App\Models\ContingenciaIncidente;
 use App\Models\Empresa;
 use App\Models\Establecimiento;
 use App\Models\Reclamacion;
+use App\Models\ReclamacionRespuesta;
 use App\Models\User;
+use App\Services\AuditoriaService;
 use App\Services\ContingenciaService;
+use App\Services\PdfConstanciaService;
 use App\Services\SalidaClienteService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -269,7 +276,116 @@ test('procesar baja formal de cliente revoca accesos de usuarios y programa rete
     ]);
 });
 
-test('paquete de custodia legal exporta un ZIP íntegro con expedientes, auditoría, acta legal y hash SHA-256', function () {
+test('la baja de empresa es estrictamente atomica y no desactiva usuarios si falla la generacion del paquete de custodia', function () {
+    // Mockear PdfConstanciaService para simular una falla catastrófica (ej. disco lleno o error de memoria)
+    $mockPdfService = Mockery::mock(PdfConstanciaService::class);
+    $mockPdfService->shouldReceive('generarPdf')
+        ->andThrow(new RuntimeException('Fallo simulado de renderizado de PDF en custodia.'));
+
+    $salidaService = new SalidaClienteService(
+        app(AuditoriaService::class),
+        $mockPdfService
+    );
+
+    // Crear una reclamación para que intente generar el PDF
+    Reclamacion::create([
+        'empresa_id' => $this->empresa->id,
+        'numero_hoja' => '000099-2026',
+        'tipo' => TipoReclamacion::Reclamo,
+        'estado' => EstadoReclamacion::Pendiente,
+        'tipo_bien' => TipoBien::Producto,
+        'descripcion_bien' => 'Producto de prueba',
+        'detalle_problema' => 'Falla simulada',
+        'pedido_consumidor' => 'Ninguno',
+        'aviso_privacidad_leido' => true,
+        'aviso_privacidad_version' => '1.0',
+        'aviso_privacidad_aceptado_en' => now(),
+        'datos_consumidor' => ['nombres' => 'Prueba', 'apellidos' => 'Error'],
+        'datos_legales_snapshot' => ['razon_social' => 'COMERCIAL ANDINA S.A.C.', 'ruc' => '20123456789'],
+        'fecha_hora' => now(),
+    ]);
+
+    // El intento de baja debe fallar con RuntimeException
+    expect(function () use ($salidaService) {
+        $salidaService->procesarBaja($this->empresa, 'Cierre con error simulado', $this->superadmin, 24);
+    })->toThrow(RuntimeException::class);
+
+    // Verificación de atomicidad: la empresa DEBE seguir activa y no en BajaProgramada
+    $this->empresa->refresh();
+    expect($this->empresa->estado)->toBe(EstadoEmpresa::Activa)
+        ->and($this->empresa->activo)->toBeTrue()
+        ->and($this->empresa->fecha_baja)->toBeNull();
+
+    // Los accesos de los usuarios deben continuar activos
+    $vinculo = DB::table('empresa_usuario')
+        ->where('empresa_id', $this->empresa->id)
+        ->where('user_id', $this->adminUsuario->id)
+        ->first();
+    expect((bool) $vinculo->activo)->toBeTrue();
+});
+
+test('paquete de custodia legal exporta un ZIP íntegro con expedientes, auditoría, constancias PDF, acta legal y hash SHA-256', function () {
+    // 1. Crear una reclamación para la empresa con datos completos de consumidor
+    $reclamacion = Reclamacion::create([
+        'empresa_id' => $this->empresa->id,
+        'establecimiento_id' => $this->establecimiento->id,
+        'numero_hoja' => '000001-2026',
+        'token_consulta' => 'CUSTODIA-TEST-TOKEN-1234',
+        'tipo' => TipoReclamacion::Reclamo,
+        'estado' => EstadoReclamacion::Atendida,
+        'tipo_bien' => TipoBien::Producto,
+        'descripcion_bien' => 'Televisor OLED 65 pulgadas',
+        'monto_reclamado' => 3500.00,
+        'detalle_problema' => 'Falla en panel tras encendido.',
+        'pedido_consumidor' => 'Cambio de unidad nueva.',
+        'aviso_privacidad_leido' => true,
+        'aviso_privacidad_version' => '1.0',
+        'aviso_privacidad_aceptado_en' => now(),
+        'datos_consumidor' => [
+            'nombres' => 'Mario',
+            'apellidos' => 'Vargas Llosa',
+            'tipo_documento' => 'DNI',
+            'numero_documento' => '08765432',
+            'email' => 'mario.vargas@ejemplo.pe',
+            'telefono' => '987112233',
+            'direccion' => 'Av. Larco 770, Miraflores',
+        ],
+        'datos_legales_snapshot' => [
+            'razon_social' => 'COMERCIAL ANDINA S.A.C.',
+            'ruc' => '20123456789',
+        ],
+        'fecha_hora' => now()->subDays(5),
+    ]);
+
+    // 2. Asociar respuesta formal a la reclamación
+    ReclamacionRespuesta::create([
+        'empresa_id' => $this->empresa->id,
+        'reclamacion_id' => $reclamacion->id,
+        'user_id' => $this->adminUsuario->id,
+        'autor_nombre' => 'Carlos Administrador',
+        'autor_cargo' => 'Jefe de Servicio al Cliente',
+        'decision' => DecisionRespuesta::Procedente,
+        'propuesta_solucion' => 'Se procederá al cambio inmediato del equipo por una unidad nueva.',
+        'fundamento_legal' => 'Garantía legal según Código de Protección al Consumidor.',
+        'version' => 1,
+        'fecha_respuesta' => now()->subDay(),
+        'notificado' => true,
+        'notificado_en' => now()->subDay(),
+    ]);
+
+    // Simular que el tenant activo en contexto es OTRA empresa para verificar el bypass de TenantScope
+    $otraEmpresa = Empresa::create([
+        'name' => 'Otra Empresa Distinta',
+        'razon_social' => 'OTRA EMPRESA S.A.C.',
+        'ruc' => '20999888777',
+        'direccion' => 'Calle Ajena 123',
+        'slug' => 'otra-empresa',
+        'estado' => EstadoEmpresa::Activa,
+        'activo' => true,
+        'plan' => PlanEmpresa::Basico,
+    ]);
+    $otraEmpresa->makeCurrent();
+
     $salidaService = app(SalidaClienteService::class);
     $paquete = $salidaService->generarPaqueteCustodia($this->empresa, $this->superadmin);
 
@@ -286,10 +402,27 @@ test('paquete de custodia legal exporta un ZIP íntegro con expedientes, auditor
         ->and($zip->locateName('bitacora_auditoria.csv'))->not->toBeFalse()
         ->and($zip->locateName('ACTA_CUSTODIA_LEGAL.txt'))->not->toBeFalse();
 
-    // Verificar que el acta legal contiene los datos exigidos
+    // Contiene la constancia PDF generada para la reclamación
+    $pdfEntry = $zip->locateName("constancias/{$reclamacion->numero_hoja}.pdf");
+    expect($pdfEntry)->not->toBeFalse();
+    $pdfContent = $zip->getFromName("constancias/{$reclamacion->numero_hoja}.pdf");
+    expect($pdfContent)->toStartWith('%PDF-');
+
+    // Verificar que el CSV de expedientes contiene los datos reales sin columnas vacías
+    $csvContent = $zip->getFromName('expedientes_reclamaciones.csv');
+    expect($csvContent)->toContain('000001-2026')
+        ->and($csvContent)->toContain('Mario Vargas Llosa')
+        ->and($csvContent)->toContain('08765432')
+        ->and($csvContent)->toContain('mario.vargas@ejemplo.pe')
+        ->and($csvContent)->toContain('Falla en panel tras encendido.')
+        ->and($csvContent)->toContain('Se procederá al cambio inmediato del equipo');
+
+    // Verificar que el acta legal contiene los datos exigidos y los conteos reales
     $actaContenido = $zip->getFromName('ACTA_CUSTODIA_LEGAL.txt');
     expect($actaContenido)->toContain('COMERCIAL ANDINA S.A.C.')
         ->and($actaContenido)->toContain('20123456789')
+        ->and($actaContenido)->toContain('Total de reclamaciones y quejas registradas: 1')
+        ->and($actaContenido)->toContain('Total de constancias probatorias PDF generadas: 1')
         ->and($actaContenido)->toContain('Ley N° 29571')
         ->and($actaContenido)->toContain('24 meses');
 
@@ -299,6 +432,9 @@ test('paquete de custodia legal exporta un ZIP íntegro con expedientes, auditor
     if (file_exists($paquete['path'])) {
         unlink($paquete['path']);
     }
+
+    // Restaurar tenant
+    $otraEmpresa->forget();
 });
 
 test('portal público bloquea el acceso si la empresa se encuentra en baja programada bajo custodia legal', function () {

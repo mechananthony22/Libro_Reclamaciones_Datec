@@ -7,11 +7,26 @@ const flashSuccess = computed(() => (page.props.flash as any)?.success || null);
 
 const showPassword = ref(false);
 const showDemoAccesos = ref(false);
+const modalRecuperar = ref(false);
+const pasoRecuperar = ref(1);
+const showNuevaPassword = ref(false);
+const showConfirmarPassword = ref(false);
 
 const form = useForm({
     email: '',
     password: '',
     remember: false,
+});
+
+const formEnviarCodigo = useForm({
+    email: '',
+});
+
+const formRestablecer = useForm({
+    email: '',
+    codigo: '',
+    password: '',
+    password_confirmation: '',
 });
 
 function submit() {
@@ -23,6 +38,55 @@ function submit() {
 function usarDemo(email: string) {
     form.email = email;
     form.password = 'password123';
+}
+
+function abrirModalRecuperar() {
+    formEnviarCodigo.email = form.email || '';
+    pasoRecuperar.value = 1;
+    formEnviarCodigo.clearErrors();
+    formRestablecer.clearErrors();
+    modalRecuperar.value = true;
+}
+
+function cerrarModalRecuperar() {
+    modalRecuperar.value = false;
+    pasoRecuperar.value = 1;
+    formEnviarCodigo.clearErrors();
+    formRestablecer.clearErrors();
+}
+
+function solicitarCodigo() {
+    formEnviarCodigo.post('/password/enviar-codigo', {
+        preserveScroll: true,
+        onSuccess: () => {
+            formRestablecer.email = formEnviarCodigo.email;
+            formRestablecer.codigo = '';
+            formRestablecer.password = '';
+            formRestablecer.password_confirmation = '';
+            formRestablecer.clearErrors();
+            pasoRecuperar.value = 2;
+        },
+    });
+}
+
+function ejecutarRestablecimiento() {
+    formRestablecer.post('/password/restablecer', {
+        preserveScroll: true,
+        onSuccess: () => {
+            modalRecuperar.value = false;
+            pasoRecuperar.value = 1;
+            form.email = formRestablecer.email;
+            form.password = '';
+            formEnviarCodigo.reset();
+            formRestablecer.reset();
+        },
+    });
+}
+
+function volverAPaso1() {
+    pasoRecuperar.value = 1;
+    formRestablecer.clearErrors();
+    formEnviarCodigo.clearErrors();
 }
 </script>
 
@@ -161,7 +225,7 @@ function usarDemo(email: string) {
                             </p>
                         </div>
 
-                        <!-- Recordar Sesión / Enlace -->
+                        <!-- Recordar Sesión / Olvidaste Contraseña -->
                         <div class="flex items-center justify-between text-xs pt-1">
                             <label class="flex items-center gap-2 cursor-pointer select-none text-slate-600 font-medium">
                                 <input
@@ -172,9 +236,13 @@ function usarDemo(email: string) {
                                 <span>Recordarme</span>
                             </label>
 
-                            <Link href="/consulta-reclamo" class="text-slate-600 hover:text-blue-700 transition font-medium text-xs">
-                                ¿Consultar reclamo?
-                            </Link>
+                            <button
+                                type="button"
+                                @click="abrirModalRecuperar"
+                                class="text-slate-600 hover:text-blue-700 transition font-medium text-xs cursor-pointer"
+                            >
+                                ¿Olvidaste tu contraseña?
+                            </button>
                         </div>
 
                         <!-- Botón Principal: Iniciar Sesión -->
@@ -243,5 +311,217 @@ function usarDemo(email: string) {
                 </div>
             </div>
         </div>
+
+        <!-- Modal Interactivo: Recuperación de Contraseña mediante Código por Correo -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transform transition ease-out duration-300"
+                enter-from-class="opacity-0 scale-95"
+                enter-to-class="opacity-100 scale-100"
+                leave-active-class="transform transition ease-in duration-200"
+                leave-from-class="opacity-100 scale-100"
+                leave-to-class="opacity-0 scale-95"
+            >
+                <div
+                    v-if="modalRecuperar"
+                    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+                    @click.self="cerrarModalRecuperar"
+                >
+                    <div class="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 sm:p-7 shadow-2xl border border-slate-100 relative animate-fade-in text-left">
+                        <!-- Botón Cerrar (X) -->
+                        <button
+                            type="button"
+                            @click="cerrarModalRecuperar"
+                            class="absolute top-4 right-4 rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition cursor-pointer"
+                        >
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+
+                        <!-- PASO 1: Solicitar Código -->
+                        <div v-if="pasoRecuperar === 1" class="space-y-4">
+                            <div class="text-center">
+                                <div class="mx-auto flex h-13 w-13 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-8 ring-blue-50/50 mb-3">
+                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-extrabold text-slate-900">
+                                    ¿Olvidaste tu contraseña?
+                                </h3>
+                                <p class="mt-1 text-xs text-slate-500 leading-relaxed">
+                                    Ingresa tu correo registrado y te enviaremos un código de seguridad de 6 dígitos para restablecerla al instante.
+                                </p>
+                            </div>
+
+                            <form @submit.prevent="solicitarCodigo" class="space-y-3.5 mt-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                        Correo Electrónico *
+                                    </label>
+                                    <div class="relative">
+                                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                        <input
+                                            v-model="formEnviarCodigo.email"
+                                            type="email"
+                                            required
+                                            placeholder="ejemplo@empresa.com"
+                                            class="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition outline-none"
+                                            :class="{ 'border-rose-400 bg-rose-50/30': formEnviarCodigo.errors.email }"
+                                        />
+                                    </div>
+                                    <p v-if="formEnviarCodigo.errors.email" class="mt-1 text-xs text-rose-600 font-medium">
+                                        {{ formEnviarCodigo.errors.email }}
+                                    </p>
+                                </div>
+
+                                <div class="pt-2">
+                                    <button
+                                        type="submit"
+                                        :disabled="formEnviarCodigo.processing"
+                                        class="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 text-xs sm:text-sm shadow-md shadow-blue-500/25 transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                                    >
+                                        <span v-if="formEnviarCodigo.processing">Enviando código...</span>
+                                        <span v-else>Enviar código a mi correo</span>
+                                    </button>
+                                </div>
+
+                                <div class="text-center pt-1">
+                                    <button
+                                        type="button"
+                                        @click="cerrarModalRecuperar"
+                                        class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                                    >
+                                        Cancelar y volver al inicio
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- PASO 2: Ingresar Código y Nueva Contraseña -->
+                        <div v-else class="space-y-4">
+                            <div class="text-center">
+                                <div class="mx-auto flex h-13 w-13 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-8 ring-emerald-50/50 mb-3">
+                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-extrabold text-slate-900">
+                                    Ingresa el código recibido
+                                </h3>
+                                <p class="mt-1 text-xs text-slate-500 leading-relaxed">
+                                    Enviamos un código de 6 dígitos a <strong class="text-slate-800">{{ formRestablecer.email }}</strong>. Ingrésalo para definir tu nueva contraseña.
+                                </p>
+                            </div>
+
+                            <form @submit.prevent="ejecutarRestablecimiento" class="space-y-3 mt-3">
+                                <!-- Campo Código de 6 Dígitos -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                                        Código de 6 Dígitos *
+                                    </label>
+                                    <input
+                                        v-model="formRestablecer.codigo"
+                                        type="text"
+                                        required
+                                        maxlength="6"
+                                        autocomplete="one-time-code"
+                                        placeholder="123456"
+                                        class="w-full text-center font-mono text-xl sm:text-2xl font-black tracking-[8px] rounded-xl border border-blue-300 bg-blue-50/40 py-2.5 text-blue-900 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition outline-none"
+                                        :class="{ 'border-rose-400 bg-rose-50/30 text-rose-900': formRestablecer.errors.codigo }"
+                                    />
+                                    <p v-if="formRestablecer.errors.codigo" class="mt-1 text-xs text-rose-600 font-medium text-center">
+                                        {{ formRestablecer.errors.codigo }}
+                                    </p>
+                                </div>
+
+                                <!-- Campo Nueva Contraseña -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                            Nueva Contraseña *
+                                        </label>
+                                        <button
+                                            type="button"
+                                            @click="showNuevaPassword = !showNuevaPassword"
+                                            class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition uppercase tracking-wider cursor-pointer"
+                                        >
+                                            {{ showNuevaPassword ? 'Ocultar' : 'Mostrar' }}
+                                        </button>
+                                    </div>
+                                    <input
+                                        v-model="formRestablecer.password"
+                                        :type="showNuevaPassword ? 'text' : 'password'"
+                                        required
+                                        placeholder="Mínimo 8 caracteres"
+                                        class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2 text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition outline-none"
+                                        :class="{ 'border-rose-400 bg-rose-50/30': formRestablecer.errors.password }"
+                                    />
+                                    <p v-if="formRestablecer.errors.password" class="mt-1 text-xs text-rose-600 font-medium">
+                                        {{ formRestablecer.errors.password }}
+                                    </p>
+                                </div>
+
+                                <!-- Campo Confirmar Contraseña -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                            Confirmar Contraseña *
+                                        </label>
+                                        <button
+                                            type="button"
+                                            @click="showConfirmarPassword = !showConfirmarPassword"
+                                            class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition uppercase tracking-wider cursor-pointer"
+                                        >
+                                            {{ showConfirmarPassword ? 'Ocultar' : 'Mostrar' }}
+                                        </button>
+                                    </div>
+                                    <input
+                                        v-model="formRestablecer.password_confirmation"
+                                        :type="showConfirmarPassword ? 'text' : 'password'"
+                                        required
+                                        placeholder="Repite tu nueva contraseña"
+                                        class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2 text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition outline-none"
+                                    />
+                                </div>
+
+                                <div class="pt-2">
+                                    <button
+                                        type="submit"
+                                        :disabled="formRestablecer.processing"
+                                        class="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 text-xs sm:text-sm shadow-md shadow-blue-500/25 transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                                    >
+                                        <span v-if="formRestablecer.processing">Restableciendo contraseña...</span>
+                                        <span v-else>Restablecer contraseña y acceder</span>
+                                    </button>
+                                </div>
+
+                                <div class="flex items-center justify-between pt-1 text-xs">
+                                    <button
+                                        type="button"
+                                        @click="volverAPaso1"
+                                        class="font-semibold text-blue-600 hover:text-blue-800 transition cursor-pointer"
+                                    >
+                                        &larr; Solicitar otro código
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="cerrarModalRecuperar"
+                                        class="font-semibold text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
     </div>
 </template>

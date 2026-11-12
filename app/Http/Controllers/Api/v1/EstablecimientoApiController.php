@@ -20,6 +20,10 @@ class EstablecimientoApiController extends Controller
         /** @var Empresa $empresa */
         $empresa = Empresa::where('slug', $slug)->firstOrFail();
 
+        if (! $empresa->isActiva()) {
+            abort(403, 'La empresa especificada no se encuentra activa.');
+        }
+
         $establecimientos = $empresa->establecimientos()
             ->where('activo', true)
             ->orderBy('es_principal', 'desc')

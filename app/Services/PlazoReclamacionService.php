@@ -50,7 +50,7 @@ class PlazoReclamacionService
     }
 
     /**
-     * Verifica si una fecha dada es día hábil (lunes a viernes y no feriado fijo nacional).
+     * Verifica si una fecha dada es día hábil (lunes a viernes, no feriado fijo nacional ni feriado móvil de Semana Santa).
      */
     public function esDiaHabil(CarbonInterface $fecha): bool
     {
@@ -63,7 +63,31 @@ class PlazoReclamacionService
             return false;
         }
 
+        // Feriados móviles de Semana Santa en Perú (Jueves Santo y Viernes Santo)
+        $year = (int) $fecha->format('Y');
+        $feriadosMoviles = $this->obtenerFeriadosMoviles($year);
+        if (in_array($fecha->format('Y-m-d'), $feriadosMoviles, true)) {
+            return false;
+        }
+
         return true;
+    }
+
+    /**
+     * Retorna los feriados móviles oficiales de Perú (Jueves Santo y Viernes Santo) para un año dado.
+     *
+     * @return array<int, string>
+     */
+    public function obtenerFeriadosMoviles(int $year): array
+    {
+        // easter_date() retorna la medianoche de Domingo de Pascua
+        $pascuaTimestamp = easter_date($year);
+        $pascua = Carbon::createFromTimestamp($pascuaTimestamp, 'America/Lima');
+
+        return [
+            $pascua->copy()->subDays(3)->format('Y-m-d'), // Jueves Santo
+            $pascua->copy()->subDays(2)->format('Y-m-d'), // Viernes Santo
+        ];
     }
 
     /**

@@ -27,7 +27,7 @@ class SoporteController extends Controller
     public function index(Request $request): Response
     {
         $query = SoporteAutorizacion::query()
-            ->with(['empresa:id,name,slug,ruc', 'solicitadoPor:id,name,email', 'autorizadoPor:id,name,email'])
+            ->with(['empresa:id,name,slug,ruc', 'solicitadoPor:id,name,email', 'autorizadoPor:id,name,email', 'finalizadoPor:id,name,email'])
             ->orderBy('created_at', 'desc');
 
         if ($empresaId = $request->input('empresa_id')) {
@@ -51,6 +51,9 @@ class SoporteController extends Controller
             'horas_vigencia' => $item->horas_vigencia,
             'autorizado_en' => $item->autorizado_en?->format('d/m/Y H:i'),
             'valido_hasta' => $item->valido_hasta?->format('d/m/Y H:i'),
+            'finalizado_en' => $item->finalizado_en?->format('d/m/Y H:i'),
+            'resolucion_detalle' => $item->resolucion_detalle,
+            'finalizado_por' => $item->finalizadoPor?->name,
             'solicitado_por' => $item->solicitadoPor?->name ?? 'Datec Soporte',
             'autorizado_por' => $item->autorizadoPor?->name,
             'created_at' => $item->created_at?->format('d/m/Y H:i'),
@@ -110,5 +113,33 @@ class SoporteController extends Controller
         );
 
         return back()->with('success', "Solicitud de acceso delegado {$ticket->codigo_ticket} generada para {$empresa->name}. Requiere autorización del cliente.");
+    }
+
+    /**
+     * Permite al Superadministrador marcar como resuelto / finalizado un ticket de soporte.
+     */
+    public function finalizar(Request $request, int $id): RedirectResponse
+    {
+        $ticket = SoporteAutorizacion::findOrFail($id);
+        $user = $request->user();
+        $resolucion = trim((string) ($request->input('resolucion') ?: 'Atención técnica completada y verificada por Datec Soporte.'));
+
+        $ticket->finalizar($user, $resolucion);
+
+        $this->auditoriaService->registrar(
+            'ticket_soporte_finalizado_superadmin',
+            'soporte',
+            "Superadmin {$user?->name} finalizó el ticket de soporte {$ticket->codigo_ticket} de la empresa {$ticket->empresa?->name}. Resolución: {$resolucion}",
+            [
+                'empresa_id' => $ticket->empresa_id,
+                'datos_despues' => [
+                    'codigo_ticket' => $ticket->codigo_ticket,
+                    'estado' => $ticket->estado,
+                    'finalizado_en' => now()->toIso8601String(),
+                ],
+            ]
+        );
+
+        return back()->with('success', "Ticket {$ticket->codigo_ticket} marcado como Finalizado exitosamente.");
     }
 }

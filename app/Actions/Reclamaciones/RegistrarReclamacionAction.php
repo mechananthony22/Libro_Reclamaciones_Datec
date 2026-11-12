@@ -10,6 +10,7 @@ use App\Models\Reclamacion;
 use App\Models\ReclamacionAdjunto;
 use App\Models\ReclamacionEvento;
 use App\Services\CorrelativoService;
+use App\Services\PlazoReclamacionService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -21,7 +22,8 @@ use Illuminate\Support\Str;
 class RegistrarReclamacionAction
 {
     public function __construct(
-        protected CorrelativoService $correlativoService
+        protected CorrelativoService $correlativoService,
+        protected PlazoReclamacionService $plazoService
     ) {}
 
     /**
@@ -83,11 +85,14 @@ class RegistrarReclamacionAction
                 $datos['establecimiento_id'] ?? null
             );
 
+            $fechaHora = now();
+            $venceEn = $this->plazoService->calcularFechaVencimiento($fechaHora, 15);
+
             $reclamacion = Reclamacion::create([
                 'empresa_id' => $empresa->id,
                 'establecimiento_id' => $datos['establecimiento_id'] ?? null,
                 'numero_hoja' => $numeroHoja,
-                'fecha_hora' => now(),
+                'fecha_hora' => $fechaHora,
                 'tipo' => $datos['tipo'],
                 'tipo_bien' => $datos['tipo_bien'],
                 'monto_reclamado' => $datos['monto_reclamado'] ?? null,
@@ -104,6 +109,7 @@ class RegistrarReclamacionAction
                 'aviso_privacidad_ip' => $ip,
                 'estado' => EstadoReclamacion::Pendiente,
                 'token_consulta' => Str::random(40),
+                'vence_en' => $venceEn,
             ]);
 
             // Auditoría inmutable de presentación

@@ -10,6 +10,7 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Notificación transaccional formal enviada al consumidor tras registrar su reclamo o queja.
@@ -46,7 +47,7 @@ class ConstanciaReclamacionMailable extends Mailable
     {
         $empresa = $this->reclamacion->empresa;
         $consumidor = $this->reclamacion->datos_consumidor ?? [];
-        $urlDescargaPdf = route('libro.constancia.pdf', [
+        $urlDescargaPdf = URL::temporarySignedRoute('libro.constancia.pdf', now()->addDays(30), [
             'slug' => $empresa->slug,
             'token' => $this->reclamacion->token_consulta,
         ]);

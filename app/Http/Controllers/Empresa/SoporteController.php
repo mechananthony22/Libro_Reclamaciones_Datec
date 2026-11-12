@@ -30,7 +30,7 @@ class SoporteController extends Controller
         $empresa = Empresa::current();
 
         $tickets = SoporteAutorizacion::where('empresa_id', $empresa->id)
-            ->with(['solicitadoPor:id,name,email', 'autorizadoPor:id,name,email'])
+            ->with(['solicitadoPor:id,name,email', 'autorizadoPor:id,name,email', 'finalizadoPor:id,name,email'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn (SoporteAutorizacion $item) => [
@@ -45,6 +45,9 @@ class SoporteController extends Controller
                 'valido_hasta' => $item->valido_hasta?->format('d/m/Y H:i'),
                 'revocado_en' => $item->revocado_en?->format('d/m/Y H:i'),
                 'motivo_revocacion' => $item->motivo_revocacion,
+                'finalizado_en' => $item->finalizado_en?->format('d/m/Y H:i'),
+                'resolucion_detalle' => $item->resolucion_detalle,
+                'finalizado_por' => $item->finalizadoPor?->name,
                 'solicitado_por' => $item->solicitadoPor?->name ?? 'Datec Soporte',
                 'autorizado_por' => $item->autorizadoPor?->name,
                 'created_at' => $item->created_at?->format('d/m/Y H:i'),
@@ -151,6 +154,36 @@ class SoporteController extends Controller
         );
 
         return back()->with('success', "Acceso delegado para soporte técnico concedido por {$horas} horas.");
+    }
+
+    /**
+     * Finaliza o marca como resuelto el ticket de soporte técnico.
+     */
+    public function finalizar(Request $request, int $id): RedirectResponse
+    {
+        /** @var Empresa $empresa */
+        $empresa = Empresa::current();
+
+        $ticket = SoporteAutorizacion::where('empresa_id', $empresa->id)->findOrFail($id);
+        $resolucion = trim((string) ($request->input('resolucion') ?: 'Atención de soporte técnico finalizada con éxito.'));
+
+        $ticket->finalizar($request->user(), $resolucion);
+
+        $this->auditoriaService->registrar(
+            'ticket_soporte_finalizado',
+            'soporte',
+            "Ticket de soporte técnico {$ticket->codigo_ticket} marcado como finalizado. Detalle: {$resolucion}",
+            [
+                'empresa_id' => $empresa->id,
+                'datos_despues' => [
+                    'codigo_ticket' => $ticket->codigo_ticket,
+                    'estado' => $ticket->estado,
+                    'finalizado_en' => now()->toIso8601String(),
+                ],
+            ]
+        );
+
+        return back()->with('success', "Ticket {$ticket->codigo_ticket} marcado como finalizado y resuelto.");
     }
 
     /**

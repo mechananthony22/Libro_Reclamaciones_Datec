@@ -148,3 +148,50 @@ test('el superadministrador puede acceder al listado de empresas con invitacione
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page->component('Admin/Empresas/Index'));
 });
+
+test('un usuario cuya empresa esta inactiva recibe 403 y no es deslogueado silenciosamente', function () {
+    $empresaInactiva = Empresa::create([
+        'name' => 'Empresa Inactiva SAC',
+        'slug' => 'empresa-inactiva',
+        'razon_social' => 'EMPRESA INACTIVA S.A.C.',
+        'ruc' => '20199988877',
+        'estado' => EstadoEmpresa::Suspendida,
+        'plan' => PlanEmpresa::Basico,
+        'activo' => false,
+    ]);
+
+    $usuario = User::create([
+        'name' => 'Usuario Empresa Inactiva',
+        'email' => 'inactivo@empresa.pe',
+        'password' => Hash::make('password123'),
+        'is_superadmin' => false,
+    ]);
+
+    $usuario->empresas()->attach($empresaInactiva->id, [
+        'rol' => RolEmpresa::AdminEmpresa->value,
+        'activo' => true,
+    ]);
+
+    $response = $this->actingAs($usuario)
+        ->withSession(['current_tenant_id' => $empresaInactiva->id])
+        ->get('/dashboard');
+
+    $response->assertForbidden();
+    // El usuario debe seguir autenticado en el sistema (sin logout silencioso)
+    $this->assertAuthenticatedAs($usuario);
+});
+
+test('un usuario sin empresas asignadas recibe 403 y mantiene su sesion autenticada', function () {
+    $usuarioHuerfano = User::create([
+        'name' => 'Usuario Sin Empresa',
+        'email' => 'huerfano@sistema.pe',
+        'password' => Hash::make('password123'),
+        'is_superadmin' => false,
+    ]);
+
+    $response = $this->actingAs($usuarioHuerfano)
+        ->get('/dashboard');
+
+    $response->assertForbidden();
+    $this->assertAuthenticatedAs($usuarioHuerfano);
+});

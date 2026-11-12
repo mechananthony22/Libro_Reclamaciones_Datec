@@ -8,10 +8,13 @@ use App\Enums\RolEmpresa;
 use App\Enums\TipoBien;
 use App\Enums\TipoReclamacion;
 use App\Jobs\EnviarConstanciaReclamacionJob;
+use App\Jobs\NotificarNuevaReclamacionEmpresaJob;
+use App\Mail\NuevaReclamacionEmpresaMailable;
 use App\Mail\RespuestaReclamacionMailable;
 use App\Models\AuditoriaLog;
 use App\Models\Empresa;
 use App\Models\Reclamacion;
+use App\Models\ReclamacionEnvio;
 use App\Models\ReclamacionRespuesta;
 use App\Models\User;
 use App\Services\AuditoriaService;
@@ -241,4 +244,192 @@ test('el historial de auditoria de la empresa respeta estrictamente el aislamien
         ->has('logs.data', 1)
         ->where('logs.data.0.descripcion', 'Cambio en empresa Lima')
     );
+});
+
+test('el endpoint alias /empresa/auditoria responde correctamente con el historial del tenant', function () {
+    $this->empresaA->makeCurrent();
+
+    $response = $this->actingAs($this->adminA)
+        ->get('/empresa/auditoria');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->component('Empresa/Auditoria/Index'));
+});
+
+test('el administrador de la empresa puede exportar su bitacora de auditoria a CSV con aislamiento estricto', function () {
+    $service = app(AuditoriaService::class);
+
+    $service->registrar(
+        accion: 'login_exitoso',
+        modulo: 'seguridad',
+        descripcion: 'Inicio de sesion Lima',
+        opciones: ['empresa_id' => $this->empresaA->id, 'user' => $this->adminA]
+    );
+
+    $service->registrar(
+        accion: 'login_exitoso',
+        modulo: 'seguridad',
+        descripcion: 'Inicio de sesion confidencial Cusco',
+        opciones: ['empresa_id' => $this->empresaB->id, 'user' => $this->adminB]
+    );
+
+    $this->empresaA->makeCurrent();
+
+    $response = $this->actingAs($this->adminA)
+        ->get(route('empresa.auditoria.exportar'));
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
+
+    // Capturar contenido streamed
+    ob_start();
+    $response->sendContent();
+    $csvOutput = ob_get_clean();
+
+    expect($csvOutput)->toContain('Inicio de sesion Lima')
+        ->and($csvOutput)->not->toContain('Inicio de sesion confidencial Cusco');
+
+    // Verificar que la acción de exportación se auditó
+    $this->assertDatabaseHas('auditoria_logs', [
+        'empresa_id' => $this->empresaA->id,
+        'accion' => 'auditoria_exportada',
+    ]);
+});
+
+test('comando de purga de auditoria bloquea ejecucion si se solicitan menos de 24 meses sin flag force', function () {
+    $this->artisan('auditoria:purgar', ['--meses' => 12])
+        ->expectsOutputToContain('La normativa peruana (Ley N° 29571 / D.S. N° 011-2011-PCM) exige conservar las reclamaciones y su trazabilidad durante al menos 24 meses.')
+        ->assertFailed();
+});
+
+test('comando de purga de auditoria elimina logs que superan la antiguedad legal respetando logs recientes', function () {
+    // 1. Crear un log antiguo de hace 26 meses (debe ser purgado)
+    $logAntiguo = AuditoriaLog::create([
+        'empresa_id' => $this->empresaA->id,
+        'actor_tipo' => 'sistema',
+        'actor_nombre' => 'Sistema',
+        'modulo' => 'seguridad',
+        'accion' => 'evento_antiguo',
+        'descripcion' => 'Evento ocurrido hace 26 meses',
+        'created_at' => now()->subMonths(26),
+    ]);
+
+    // 2. Crear un log reciente de hace 2 meses (debe conservarse)
+    $logReciente = AuditoriaLog::create([
+        'empresa_id' => $this->empresaA->id,
+        'actor_tipo' => 'sistema',
+        'actor_nombre' => 'Sistema',
+        'modulo' => 'seguridad',
+        'accion' => 'evento_reciente',
+        'descripcion' => 'Evento ocurrido hace 2 meses',
+        'created_at' => now()->subMonths(2),
+    ]);
+
+    // 3. Simulación dry-run no debe borrar nada
+    $this->artisan('auditoria:purgar', ['--meses' => 24, '--dry-run' => true])
+        ->expectsOutputToContain('[MODO SIMULACIÓN - DRY RUN]')
+        ->assertSuccessful();
+
+    expect(AuditoriaLog::find($logAntiguo->id))->not->toBeNull();
+    expect(AuditoriaLog::find($logReciente->id))->not->toBeNull();
+
+    // 4. Ejecución real con plazo legal de 24 meses
+    $this->artisan('auditoria:purgar', ['--meses' => 24])
+        ->expectsOutputToContain('Purga completada exitosamente')
+        ->assertSuccessful();
+
+    // El log antiguo debe haber sido eliminado
+    expect(AuditoriaLog::find($logAntiguo->id))->toBeNull();
+    // El log reciente debe permanecer intacto
+    expect(AuditoriaLog::find($logReciente->id))->not->toBeNull();
+});
+
+test('notificar nueva reclamacion a la empresa envia correos respetando columnas reales de envio y copia oculta', function () {
+    Mail::fake();
+
+    $this->empresaA->update([
+        'email' => 'principal@empresa-a.pe',
+        'representante_email' => 'representante@empresa-a.pe',
+        'emails_notificaciones' => ['operaciones@empresa-a.pe'],
+        'notificar_nuevo_reclamo' => true,
+    ]);
+
+    $reclamacion = Reclamacion::create([
+        'empresa_id' => $this->empresaA->id,
+        'numero_hoja' => '000055-2026',
+        'tipo' => TipoReclamacion::Reclamo,
+        'estado' => EstadoReclamacion::Pendiente,
+        'tipo_bien' => TipoBien::Producto,
+        'descripcion_bien' => 'Servidor Blade',
+        'detalle_problema' => 'Falla de fuente redundantemente.',
+        'pedido_consumidor' => 'Reemplazo de pieza.',
+        'aviso_privacidad_leido' => true,
+        'aviso_privacidad_version' => '1.0',
+        'aviso_privacidad_aceptado_en' => now(),
+        'datos_consumidor' => ['nombres' => 'Cliente', 'apellidos' => 'Empresarial', 'email' => 'cliente@test.com'],
+        'datos_legales_snapshot' => ['razon_social' => 'CORPORACION LIMA S.A.C.', 'ruc' => '20101010101'],
+        'fecha_hora' => now(),
+    ]);
+
+    $job = new NotificarNuevaReclamacionEmpresaJob($reclamacion);
+    $job->handle();
+
+    // 1. Debe haber enviado el correo
+    Mail::assertSent(NuevaReclamacionEmpresaMailable::class, function ($mail) {
+        return $mail->hasTo('operaciones@empresa-a.pe')
+            || $mail->hasTo('principal@empresa-a.pe');
+    });
+
+    // 2. Debe haber registrado los envíos en reclamacion_envios con las columnas reales
+    $envios = ReclamacionEnvio::where('reclamacion_id', $reclamacion->id)->get();
+    expect($envios)->toHaveCount(3);
+
+    foreach ($envios as $envio) {
+        expect($envio->tipo)->toBe('alerta_nueva_empresa')
+            ->and($envio->canal)->toBe('email')
+            ->and($envio->estado)->toBe('enviado')
+            ->and($envio->enviado_en)->not->toBeNull()
+            ->and($envio->intentos)->toBe(1);
+    }
+
+    // 3. Debe haberse registrado el evento en la auditoría del expediente
+    $this->assertDatabaseHas('reclamacion_eventos', [
+        'empresa_id' => $this->empresaA->id,
+        'reclamacion_id' => $reclamacion->id,
+        'accion' => 'notificacion_empresa_enviada',
+    ]);
+});
+
+test('notificar nueva reclamacion a la empresa respeta cuando notificar_nuevo_reclamo esta desactivado', function () {
+    Mail::fake();
+
+    $this->empresaA->update([
+        'notificar_nuevo_reclamo' => false,
+    ]);
+
+    $reclamacion = Reclamacion::create([
+        'empresa_id' => $this->empresaA->id,
+        'numero_hoja' => '000056-2026',
+        'tipo' => TipoReclamacion::Reclamo,
+        'estado' => EstadoReclamacion::Pendiente,
+        'tipo_bien' => TipoBien::Servicio,
+        'descripcion_bien' => 'Internet dedicado',
+        'detalle_problema' => 'Corte de servicio',
+        'pedido_consumidor' => 'Restablecimiento',
+        'aviso_privacidad_leido' => true,
+        'aviso_privacidad_version' => '1.0',
+        'aviso_privacidad_aceptado_en' => now(),
+        'datos_consumidor' => ['nombres' => 'Cliente', 'apellidos' => 'Silencioso'],
+        'datos_legales_snapshot' => ['razon_social' => 'CORPORACION LIMA S.A.C.', 'ruc' => '20101010101'],
+        'fecha_hora' => now(),
+    ]);
+
+    $job = new NotificarNuevaReclamacionEmpresaJob($reclamacion);
+    $job->handle();
+
+    // No debe enviar ningún correo
+    Mail::assertNothingSent();
+
+    // No debe crear registros de envío
+    expect(ReclamacionEnvio::where('reclamacion_id', $reclamacion->id)->count())->toBe(0);
 });

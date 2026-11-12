@@ -12,7 +12,9 @@ use App\Models\Empresa;
 use App\Models\Reclamacion;
 use App\Services\PdfConstanciaService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -39,8 +41,9 @@ class LibroReclamacionesController extends Controller
                     'name' => $empresa->name,
                     'razon_social' => $empresa->razon_social,
                     'ruc' => $empresa->ruc,
-                    'logo_url' => $empresa->logo_path ? asset('storage/'.$empresa->logo_path) : null,
-                    'color_primario' => $empresa->color_primario,
+                    'logo_path' => $empresa->logo_path,
+                    'color_primario' => $empresa->color_primario ?: '#2563EB',
+                    'slug' => $empresa->slug,
                 ],
                 'contingencia' => [
                     'mensaje' => $empresa->contingencia_mensaje ?: 'El portal de Libro de Reclamaciones se encuentra temporalmente en mantenimiento preventivo.',
@@ -174,13 +177,13 @@ class LibroReclamacionesController extends Controller
                 'tipo_label' => $reclamacion->tipo->label(),
                 'tipo_bien_label' => $reclamacion->tipo_bien->label(),
                 'fecha_hora' => $reclamacion->fecha_hora?->format('d/m/Y H:i:s') ?? now()->format('d/m/Y H:i:s'),
-                'vence_en' => $reclamacion->vence_en?->format('d/m/Y') ?? now()->addWeekdays(15)->format('d/m/Y'),
+                'vence_en' => $reclamacion->vence_en?->format('d/m/Y') ?? '',
                 'consumidor_nombre' => $nombreConsumidor,
                 'consumidor_email' => $consumidor['email'] ?? '',
                 'token_consulta' => $reclamacion->token_consulta,
                 'adjuntos_count' => $reclamacion->adjuntos_count,
             ],
-            'url_descarga_pdf' => route('libro.constancia.pdf', [
+            'url_descarga_pdf' => URL::temporarySignedRoute('libro.constancia.pdf', now()->addHours(24), [
                 'slug' => $empresa->slug,
                 'token' => $reclamacion->token_consulta,
             ]),
@@ -188,10 +191,15 @@ class LibroReclamacionesController extends Controller
     }
 
     /**
-     * Genera y descarga el archivo PDF oficial con la constancia de la reclamación.
+     * Genera y descarga el archivo PDF oficial con la constancia de la reclamación,
+     * exigiendo un enlace firmado temporal para proteger los datos personales del consumidor.
      */
-    public function descargarPdf(string $slug, string $token, PdfConstanciaService $pdfService): HttpResponse
+    public function descargarPdf(Request $request, string $slug, string $token, PdfConstanciaService $pdfService): HttpResponse
     {
+        if (! $request->hasValidSignature()) {
+            abort(403, 'El enlace de descarga de la constancia ha expirado o es inválido por motivos de seguridad y protección de datos personales. Por favor genera un nuevo enlace desde la consulta de estado.');
+        }
+
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
 

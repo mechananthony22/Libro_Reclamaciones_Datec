@@ -724,6 +724,7 @@ const qrUrl = computed(() => {
                 </form>
             </div>
         </div>
+        
     </AdminLayout>
 </template>
 

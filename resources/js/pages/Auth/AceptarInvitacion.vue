@@ -55,7 +55,7 @@ function submit() {
 
         <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
             <div class="bg-white py-8 px-6 shadow-md rounded-2xl border border-slate-200 sm:px-10">
-                <form @submit.prevent="submit" class="space-y-5">
+                <form @submit.prevent="submit" class="space-y-5" autocomplete="off">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700">Correo Electrónico (Registrado)</label>
                         <input
@@ -72,6 +72,8 @@ function submit() {
                         <input
                             v-model="form.name"
                             type="text"
+                            name="nombre_usuario"
+                            autocomplete="off"
                             required
                             placeholder="Ej. Juan Pérez"
                             class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-blue-500 focus:outline-hidden"

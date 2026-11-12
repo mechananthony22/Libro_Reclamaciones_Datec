@@ -174,8 +174,8 @@ const formInvitacion = useForm({
 
 function abrirModalInvitacion(empresa: EmpresaItem) {
     empresaSeleccionadaInvitacion.value = empresa;
-    formInvitacion.email = empresa.email || '';
-    formInvitacion.nombre = '';
+    formInvitacion.email = empresa.representante_email || empresa.email || '';
+    formInvitacion.nombre = empresa.representante_nombre || '';
     formInvitacion.rol = 'admin_empresa';
     formInvitacion.horas_expiracion = 72;
     showModalInvitacion.value = true;
@@ -200,7 +200,25 @@ function reenviarInvitacion(empresaId: number, invitacionId: number) {
 }
 
 const flashInvitacionUrl = computed(() => (page.props.flash as any)?.invitacion_url);
+const flashInvitacionEmail = computed(() => (page.props.flash as any)?.invitacion_email || '');
+const flashInvitacionEmpresa = computed(() => (page.props.flash as any)?.invitacion_empresa || 'Empresa');
 const copiadoExitoso = ref(false);
+
+const enlaceGmailInvitacion = computed(() => {
+    if (!flashInvitacionUrl.value) return '#';
+    const email = flashInvitacionEmail.value || '';
+    const empresa = flashInvitacionEmpresa.value || 'su organización';
+    const asunto = encodeURIComponent(`Activación de cuenta de Administrador - Libro de Reclamaciones (${empresa})`);
+    const cuerpo = encodeURIComponent(
+        `Estimado(a) Administrador(a),\n\n` +
+        `Se ha generado su invitación oficial para gestionar el portal del Libro de Reclamaciones de ${empresa}.\n\n` +
+        `Para configurar su contraseña y activar su acceso seguro, por favor ingrese al siguiente enlace oficial:\n` +
+        `${flashInvitacionUrl.value}\n\n` +
+        `* Este enlace es de uso único y tiene una vigencia de 72 horas.\n\n` +
+        `Atentamente,\nEquipo de Plataforma DatecLibro`
+    );
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${asunto}&body=${cuerpo}`;
+});
 
 function copiarEnlace(enlace: string) {
     navigator.clipboard.writeText(enlace);
@@ -318,19 +336,34 @@ const porcentajeActivas = computed(() =>
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        @click="copiarEnlace(flashInvitacionUrl)"
-                        class="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700"
-                    >
-                        <svg v-if="!copiadoExitoso" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                        <svg v-else class="h-4 w-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>{{ copiadoExitoso ? '¡Copiado!' : 'Copiar enlace' }}</span>
-                    </button>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <a
+                            :href="enlaceGmailInvitacion"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900"
+                            title="Abrir en Gmail con plantilla lista"
+                        >
+                            <svg class="h-4 w-4 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+                            </svg>
+                            <span>Enviar por Gmail</span>
+                        </a>
+
+                        <button
+                            type="button"
+                            @click="copiarEnlace(flashInvitacionUrl)"
+                            class="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700"
+                        >
+                            <svg v-if="!copiadoExitoso" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <svg v-else class="h-4 w-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>{{ copiadoExitoso ? '¡Copiado!' : 'Copiar enlace' }}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

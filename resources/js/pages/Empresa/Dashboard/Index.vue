@@ -139,7 +139,7 @@ const periodosOpciones = [
                             Dashboard e Indicadores de Gestión
                         </h1>
                         <p class="mt-1 text-sm text-slate-500">
-                            Control analítico de expedientes, plazos legales y desempeño de atención conforme a Ley N° 29571.
+                            Control analítico de expedientes, plazos legales y desempeño de atención
                         </p>
                     </div>
                 </div>
@@ -453,7 +453,6 @@ const periodosOpciones = [
                         </div>
                         <div>
                             <h2 class="text-sm font-bold text-slate-900">Clasificación por Tipo de Caso</h2>
-                            <p class="text-xs text-slate-500">Distribución normativa entre reclamos y quejas formales.</p>
                         </div>
                     </div>
 
@@ -484,7 +483,6 @@ const periodosOpciones = [
                         </div>
                         <div>
                             <h2 class="text-sm font-bold text-slate-900">Clasificación por Bien Contratado</h2>
-                            <p class="text-xs text-slate-500">Naturaleza de la prestación origen de la controversia.</p>
                         </div>
                     </div>
 

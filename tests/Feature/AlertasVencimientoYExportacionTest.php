@@ -376,3 +376,34 @@ test('exporta el reporte oficial de expedientes en formato pdf', function () {
     expect($response->headers->get('Content-Type'))->toContain('application/pdf');
     expect($response->headers->get('Content-Disposition'))->toContain('attachment; filename="reporte_reclamaciones_comercial-andina_');
 });
+
+test('administrador puede exportar a pdf cuando existen reclamaciones sin fecha de vencimiento', function () {
+    Reclamacion::create([
+        'empresa_id' => $this->empresaA->id,
+        'datos_legales_snapshot' => [
+            'razon_social' => 'COMERCIAL ANDINA S.A.C.',
+            'ruc' => '20556677889',
+        ],
+        'numero_hoja' => '00000041-2026',
+        'fecha_hora' => now()->subDays(2),
+        'tipo' => TipoReclamacion::Queja,
+        'tipo_bien' => TipoBien::Servicio,
+        'descripcion_bien' => 'Atención al cliente telefónica',
+        'estado' => EstadoReclamacion::Pendiente,
+        'vence_en' => null,
+        'datos_consumidor' => [
+            'nombres' => 'Sin',
+            'apellidos' => 'Vencimiento',
+            'tipo_documento' => 'DNI',
+            'numero_documento' => '99887766',
+        ],
+    ]);
+
+    $this->empresaA->makeCurrent();
+
+    $response = $this->actingAs($this->adminA)
+        ->get(route('empresa.expedientes.exportar', ['formato' => 'pdf']));
+
+    $response->assertOk();
+    expect($response->headers->get('Content-Type'))->toContain('application/pdf');
+});

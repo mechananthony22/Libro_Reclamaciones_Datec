@@ -83,9 +83,6 @@ function guardarConfiguracion() {
                         <h1 class="mt-0.5 text-2xl font-extrabold tracking-tight text-slate-900">
                             Destinatarios y Alertas Automáticas
                         </h1>
-                        <p class="mt-1 text-sm text-slate-500">
-                            Define los correos internos que recibirán notificaciones preventivas y de vencimiento legal de reclamaciones.
-                        </p>
                     </div>
                 </div>
             </div>
@@ -196,9 +193,6 @@ function guardarConfiguracion() {
                             <h2 class="text-sm font-bold text-slate-900">
                                 Preferencias de Alertas y Vencimientos
                             </h2>
-                            <p class="text-xs text-slate-500">
-                                Activa o pausa las notificaciones preventivas manteniendo siempre el cumplimiento legal.
-                            </p>
                         </div>
                     </div>
 

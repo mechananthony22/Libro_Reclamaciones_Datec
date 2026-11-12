@@ -15,6 +15,9 @@ interface TicketItem {
     valido_hasta: string | null;
     revocado_en: string | null;
     motivo_revocacion: string | null;
+    finalizado_en: string | null;
+    resolucion_detalle: string | null;
+    finalizado_por: string | null;
     solicitado_por: string;
     autorizado_por: string | null;
     created_at: string;
@@ -34,7 +37,9 @@ const props = defineProps<Props>();
 
 const modalNuevoTicket = ref(false);
 const modalRevocar = ref(false);
+const modalFinalizar = ref(false);
 const ticketSeleccionadoParaRevocar = ref<TicketItem | null>(null);
+const ticketSeleccionadoParaFinalizar = ref<TicketItem | null>(null);
 
 const formNuevoTicket = useForm({
     titulo: '',
@@ -50,6 +55,27 @@ const formAutorizar = useForm({
 const formRevocar = useForm({
     motivo_revocacion: '',
 });
+
+const formFinalizar = useForm({
+    resolucion: '',
+});
+
+function abrirModalFinalizar(ticket: TicketItem) {
+    ticketSeleccionadoParaFinalizar.value = ticket;
+    formFinalizar.resolucion = '';
+    modalFinalizar.value = true;
+}
+
+function confirmarFinalizacion() {
+    if (!ticketSeleccionadoParaFinalizar.value) return;
+
+    formFinalizar.patch(`/configuracion/soporte/${ticketSeleccionadoParaFinalizar.value.id}/finalizar`, {
+        onSuccess: () => {
+            modalFinalizar.value = false;
+            ticketSeleccionadoParaFinalizar.value = null;
+        },
+    });
+}
 
 function enviarNuevoTicket() {
     formNuevoTicket.post('/configuracion/soporte', {
@@ -101,6 +127,11 @@ function estadoBadge(ticket: TicketItem) {
             return {
                 clase: 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 font-semibold',
                 texto: 'Revocado',
+            };
+        case 'finalizado':
+            return {
+                clase: 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 font-bold',
+                texto: 'Finalizado / Resuelto',
             };
         case 'expirado':
             return {
@@ -198,33 +229,6 @@ const claseCampo = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2
                 </div>
             </div>
 
-            <div
-                v-else
-                class="rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-5 shadow-2xs"
-            >
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div class="flex items-start gap-3">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-emerald-950">
-                                Privacidad y Blindaje Activo
-                            </h3>
-                            <p class="text-xs text-emerald-900/80 mt-0.5 leading-relaxed">
-                                Ningún técnico de Datec puede acceder al contenido de sus reclamaciones ni a la información confidencial de sus clientes. El acceso solo se habilita si usted lo autoriza de forma expresa.
-                            </p>
-                        </div>
-                    </div>
-                    <span class="inline-flex items-center gap-1.5 self-start sm:self-center rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-800">
-                        <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Blindaje Activo
-                    </span>
-                </div>
-            </div>
-
             <!-- Tabla de Historial de Tickets y Solicitudes -->
             <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 px-5 py-4">
@@ -274,7 +278,11 @@ const claseCampo = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2
                                 <td class="px-5 py-3.5 max-w-sm">
                                     <div class="font-bold text-slate-900">{{ ticket.titulo }}</div>
                                     <div class="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{{ ticket.motivo }}</div>
-                                    <div v-if="ticket.revocado_en" class="text-[10px] text-rose-600 mt-1 font-semibold">
+                                    <div v-if="ticket.finalizado_en" class="text-[10px] text-blue-700 mt-1 font-semibold bg-blue-50/80 p-1.5 rounded-lg border border-blue-100">
+                                        ✓ Finalizado el {{ ticket.finalizado_en }} por {{ ticket.finalizado_por || 'Soporte' }}:
+                                        <span class="font-normal">{{ ticket.resolucion_detalle || 'Concluido con éxito.' }}</span>
+                                    </div>
+                                    <div v-else-if="ticket.revocado_en" class="text-[10px] text-rose-600 mt-1 font-semibold">
                                         Revocado el {{ ticket.revocado_en }}: {{ ticket.motivo_revocacion || 'Sin motivo especificado' }}
                                     </div>
                                 </td>
@@ -305,14 +313,27 @@ const claseCampo = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2
                                 </td>
                                 <td class="px-5 py-3.5 whitespace-nowrap text-right text-xs">
                                     <div class="flex items-center justify-end gap-1.5">
-                                        <button
-                                            v-if="ticket.is_activo"
-                                            type="button"
-                                            @click="abrirModalRevocar(ticket)"
-                                            class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-100 transition shadow-2xs"
-                                        >
-                                            Revocar
-                                        </button>
+                                        <template v-if="ticket.is_activo">
+                                            <button
+                                                type="button"
+                                                @click="abrirModalFinalizar(ticket)"
+                                                class="rounded-xl bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-blue-700 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                                                title="Marcar trabajo como resuelto y concluir acceso"
+                                            >
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                                <span>Finalizar</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click="abrirModalRevocar(ticket)"
+                                                class="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-100 transition shadow-2xs cursor-pointer"
+                                                title="Revocar acceso delegado"
+                                            >
+                                                Revocar
+                                            </button>
+                                        </template>
                                         <div v-else-if="ticket.estado === 'pendiente'" class="flex items-center gap-1.5">
                                             <button
                                                 type="button"
@@ -329,7 +350,7 @@ const claseCampo = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2
                                                 48h
                                             </button>
                                         </div>
-                                        <span v-else class="text-slate-300 text-xs px-2">—</span>
+                                        <span v-else class="text-slate-400 text-xs px-2 font-medium">Concluido</span>
                                     </div>
                                 </td>
                             </tr>
@@ -526,6 +547,76 @@ const claseCampo = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2
                             class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-rose-500/20 hover:bg-rose-700 disabled:opacity-50 transition cursor-pointer"
                         >
                             <span>{{ formRevocar.processing ? 'Revocando...' : 'Revocar Acceso Ahora' }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para Finalizar / Resolver Ticket -->
+        <div
+            v-if="modalFinalizar"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 sm:p-6 backdrop-blur-xs overflow-y-auto animate-fade-in"
+            @click.self="modalFinalizar = false"
+        >
+            <div class="relative flex w-full max-w-md flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-auto">
+                <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/25">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-extrabold text-slate-900">
+                                Finalizar Ticket de Soporte
+                            </h2>
+                            <p class="text-xs text-slate-500">Ticket: <strong class="font-mono text-slate-800">{{ ticketSeleccionadoParaFinalizar?.codigo_ticket }}</strong></p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        @click="modalFinalizar = false"
+                        class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 cursor-pointer"
+                    >
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4 text-xs">
+                    <div class="rounded-xl border border-blue-200/80 bg-blue-50/70 p-3.5 text-blue-900 leading-relaxed text-xs">
+                        Al marcar el ticket como <strong>Finalizado / Resuelto</strong>, se dejará constancia de que la incidencia fue atendida con éxito y se cerrará el acceso delegado automáticamente.
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Detalle de Resolución o Solución <span class="text-slate-400 font-normal">(Opcional)</span>
+                        </label>
+                        <textarea
+                            v-model="formFinalizar.resolucion"
+                            rows="3"
+                            placeholder="Ej. Se verificó y corrigió la configuración para la subida de adjuntos."
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+                        <button
+                            type="button"
+                            @click="modalFinalizar = false"
+                            class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            @click="confirmarFinalizacion"
+                            :disabled="formFinalizar.processing"
+                            class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
+                        >
+                            <span>{{ formFinalizar.processing ? 'Finalizando...' : 'Marcar como Finalizado' }}</span>
                         </button>
                     </div>
                 </div>

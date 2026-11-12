@@ -16,6 +16,9 @@ interface TicketItem {
     horas_vigencia: number;
     autorizado_en: string | null;
     valido_hasta: string | null;
+    finalizado_en?: string | null;
+    resolucion_detalle?: string | null;
+    finalizado_por?: string | null;
     solicitado_por: string;
     autorizado_por: string | null;
     created_at: string;
@@ -46,6 +49,8 @@ const formFiltros = ref({
 const hayFiltrosActivos = computed(() => Boolean(formFiltros.value.empresa_id || formFiltros.value.estado));
 
 const modalSolicitudAbierto = ref(false);
+const modalFinalizar = ref(false);
+const ticketSeleccionadoParaFinalizar = ref<TicketItem | null>(null);
 
 const formSolicitud = useForm({
     empresa_id: '',
@@ -53,6 +58,27 @@ const formSolicitud = useForm({
     motivo: '',
     horas_vigencia: 24,
 });
+
+const formFinalizar = useForm({
+    resolucion: '',
+});
+
+function abrirModalFinalizar(ticket: TicketItem) {
+    ticketSeleccionadoParaFinalizar.value = ticket;
+    formFinalizar.resolucion = '';
+    modalFinalizar.value = true;
+}
+
+function confirmarFinalizacion() {
+    if (!ticketSeleccionadoParaFinalizar.value) return;
+
+    formFinalizar.patch(`/admin/soporte/${ticketSeleccionadoParaFinalizar.value.id}/finalizar`, {
+        onSuccess: () => {
+            modalFinalizar.value = false;
+            ticketSeleccionadoParaFinalizar.value = null;
+        },
+    });
+}
 
 function aplicarFiltros() {
     router.get('/admin/soporte', formFiltros.value, {
@@ -97,6 +123,7 @@ const pestanasEstado = [
     { valor: '', etiqueta: 'Todos' },
     { valor: 'pendiente', etiqueta: 'Pendientes' },
     { valor: 'autorizado', etiqueta: 'Autorizados' },
+    { valor: 'finalizado', etiqueta: 'Finalizados' },
     { valor: 'revocado', etiqueta: 'Revocados' },
     { valor: 'expirado', etiqueta: 'Expirados' },
 ];
@@ -115,6 +142,12 @@ function estadoBadge(ticket: TicketItem) {
                 clase: 'bg-amber-50 text-amber-700 ring-amber-600/20',
                 punto: 'bg-amber-500',
                 texto: 'Pendiente de Aprobación',
+            };
+        case 'finalizado':
+            return {
+                clase: 'bg-blue-50 text-blue-700 ring-blue-600/20',
+                punto: 'bg-blue-500',
+                texto: 'Finalizado / Resuelto',
             };
         case 'revocado':
             return {
@@ -255,6 +288,7 @@ function estadoBadge(ticket: TicketItem) {
                                 <th scope="col" class="px-5 py-3">Vigencia</th>
                                 <th scope="col" class="px-5 py-3">Autorizado Por</th>
                                 <th scope="col" class="px-5 py-3">Fecha</th>
+                                <th scope="col" class="px-5 py-3 text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-slate-600">
@@ -279,6 +313,12 @@ function estadoBadge(ticket: TicketItem) {
                                 <td class="max-w-xs px-5 py-3.5">
                                     <div class="truncate font-bold text-slate-900">{{ ticket.titulo }}</div>
                                     <div class="mt-0.5 line-clamp-2 text-[11px] text-slate-500">{{ ticket.motivo }}</div>
+                                    <div v-if="ticket.resolucion_detalle" class="mt-1.5 rounded-lg border border-blue-100 bg-blue-50/70 p-2 text-[11px] text-blue-900">
+                                        <span class="font-bold">Resolución:</span> {{ ticket.resolucion_detalle }}
+                                        <div v-if="ticket.finalizado_por" class="mt-0.5 text-[10px] text-blue-700 font-medium">
+                                            Por: {{ ticket.finalizado_por }} • {{ ticket.finalizado_en }}
+                                        </div>
+                                    </div>
                                 </td>
                                 <td class="whitespace-nowrap px-5 py-3.5">
                                     <span
@@ -308,10 +348,29 @@ function estadoBadge(ticket: TicketItem) {
                                 <td class="whitespace-nowrap px-5 py-3.5 font-mono text-[11px] text-slate-400">
                                     {{ ticket.created_at }}
                                 </td>
+                                <td class="whitespace-nowrap px-5 py-3.5 text-right">
+                                    <button
+                                        v-if="ticket.is_activo || ticket.estado === 'autorizado'"
+                                        type="button"
+                                        @click="abrirModalFinalizar(ticket)"
+                                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition"
+                                    >
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>Finalizar</span>
+                                    </button>
+                                    <span v-else-if="ticket.estado === 'finalizado'" class="text-[11px] font-semibold text-blue-600">
+                                        Atendido
+                                    </span>
+                                    <span v-else class="text-[11px] text-slate-400">
+                                        —
+                                    </span>
+                                </td>
                             </tr>
 
                             <tr v-if="tickets.data.length === 0">
-                                <td colspan="7" class="px-5 py-14">
+                                <td colspan="8" class="px-5 py-14">
                                     <div class="flex flex-col items-center text-center">
                                         <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
                                             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -485,6 +544,87 @@ function estadoBadge(ticket: TicketItem) {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Modal Confirmar Finalización / Cierre de Ticket -->
+        <div
+            v-if="modalFinalizar && ticketSeleccionadoParaFinalizar"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs"
+            @click.self="modalFinalizar = false"
+        >
+            <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+                <div class="flex items-start justify-between pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900">
+                                Finalizar y Concluir Ticket
+                            </h3>
+                            <p class="font-mono text-xs text-slate-500">
+                                {{ ticketSeleccionadoParaFinalizar.codigo_ticket }} • {{ ticketSeleccionadoParaFinalizar.empresa_nombre }}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        @click="modalFinalizar = false"
+                        class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+                    >
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mt-4 space-y-3">
+                    <div class="rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-900 leading-relaxed">
+                        <p class="font-bold text-blue-950">Al finalizar este ticket de soporte:</p>
+                        <ul class="mt-1 list-disc pl-4 space-y-0.5 text-[11px] text-blue-800">
+                            <li>El acceso temporal a la empresa quedará revocado inmediatamente.</li>
+                            <li>El estado cambiará a <strong>Finalizado / Resuelto</strong> en el portal de la empresa y en el de soporte.</li>
+                            <li>Se dejará constancia en la bitácora de auditoría inmutable.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Detalle de Resolución o Trabajo Realizado (Opcional)
+                        </label>
+                        <textarea
+                            v-model="formFinalizar.resolucion"
+                            rows="3"
+                            maxlength="1000"
+                            placeholder="Ej. Incidencia resuelta satisfactoriamente, se actualizó la configuración de la plantilla y se verificó el funcionamiento con el usuario..."
+                            class="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 leading-relaxed"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2.5 pt-5 mt-5 border-t border-slate-100">
+                    <button
+                        type="button"
+                        @click="modalFinalizar = false"
+                        class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="button"
+                        :disabled="formFinalizar.processing"
+                        @click="confirmarFinalizacion"
+                        class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
+                    >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>{{ formFinalizar.processing ? 'Guardando...' : 'Confirmar Finalización' }}</span>
+                    </button>
+                </div>
             </div>
         </div>
     </AdminLayout>

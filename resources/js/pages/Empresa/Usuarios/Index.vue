@@ -129,7 +129,25 @@ function cancelarInvitacion(inv: InvitacionItem) {
 }
 
 const flashInvitacionUrl = computed(() => (page.props.flash as any)?.invitacion_url);
+const flashInvitacionEmail = computed(() => (page.props.flash as any)?.invitacion_email || '');
+const flashInvitacionEmpresa = computed(() => (page.props.flash as any)?.invitacion_empresa || props.empresa?.name || 'la empresa');
 const copiadoExitoso = ref(false);
+
+const enlaceGmailInvitacion = computed(() => {
+    if (!flashInvitacionUrl.value) return '#';
+    const email = flashInvitacionEmail.value || '';
+    const empresa = flashInvitacionEmpresa.value;
+    const asunto = encodeURIComponent(`Invitación para acceder al panel de gestión - Libro de Reclamaciones (${empresa})`);
+    const cuerpo = encodeURIComponent(
+        `Estimado(a) miembro del equipo,\n\n` +
+        `Ha sido invitado a colaborar en el panel de gestión del Libro de Reclamaciones de ${empresa}.\n\n` +
+        `Para configurar su contraseña y activar su cuenta, ingrese al siguiente enlace oficial:\n` +
+        `${flashInvitacionUrl.value}\n\n` +
+        `* Este enlace es de uso único y tiene una vigencia de 72 horas.\n\n` +
+        `Atentamente,\nAdministración de ${empresa}`
+    );
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${asunto}&body=${cuerpo}`;
+});
 
 function copiarEnlace(enlace: string) {
     navigator.clipboard.writeText(enlace);
@@ -224,7 +242,20 @@ const claseCampo =
                             {{ flashInvitacionUrl }}
                         </code>
                     </div>
-                    <div class="shrink-0 pt-2 sm:pt-0">
+                    <div class="flex shrink-0 items-center gap-2 pt-2 sm:pt-0">
+                        <a
+                            :href="enlaceGmailInvitacion"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900"
+                            title="Abrir en Gmail con plantilla lista"
+                        >
+                            <svg class="h-4 w-4 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+                            </svg>
+                            <span>Enviar por Gmail</span>
+                        </a>
+
                         <button
                             type="button"
                             @click="copiarEnlace(flashInvitacionUrl)"

@@ -123,15 +123,15 @@ const claseCampo =
         <Head title="Plan de Contingencia - Configuración" />
 
         <div class="space-y-6">
-            <!-- Cabecera de Página (Estilo Create.vue) -->
+            <!-- Cabecera de Página (Estilo Unificado Empresa) -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div class="flex items-start gap-4">
                     <div
                         :class="[
-                            'hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-md transition',
+                            'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-md transition',
                             empresa.en_contingencia
                                 ? 'bg-amber-600 shadow-amber-600/25 ring-2 ring-amber-400/50'
-                                : 'bg-amber-500 shadow-amber-500/25'
+                                : 'bg-blue-600 shadow-blue-500/25'
                         ]"
                     >
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -140,11 +140,14 @@ const claseCampo =
                     </div>
                     <div>
                         <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                            Continuidad Operativa · INDECOPI Ley N° 29571
+                            Configuración de Empresa · Continuidad Operativa
                         </div>
                         <h1 class="mt-0.5 text-2xl font-extrabold tracking-tight text-slate-900">
                             Plan de Contingencia y Recuperación
                         </h1>
+                        <p class="mt-1 text-sm text-slate-500">
+                            Gestione la suspensión preventiva del formulario público y asegure canales alternativos conforme a INDECOPI.
+                        </p>
                     </div>
                 </div>
 
@@ -154,7 +157,7 @@ const claseCampo =
                         v-if="!empresa.en_contingencia"
                         type="button"
                         @click="modalEnsayo = true"
-                        class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50"
+                        class="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50"
                     >
                         <svg class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -166,7 +169,7 @@ const claseCampo =
                         v-if="!empresa.en_contingencia"
                         type="button"
                         @click="modalActivar = true"
-                        class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-amber-600/20 transition hover:bg-amber-700"
+                        class="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-amber-600/20 transition hover:bg-amber-700"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -178,153 +181,144 @@ const claseCampo =
                         v-else
                         type="button"
                         @click="modalDesactivar = true"
-                        class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700"
+                        class="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                         </svg>
                         <span>Desactivar y Normalizar</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Card 1: Estado Operativo Actual (Estilo Create.vue) -->
+            <!-- Banner Estado Operativo Actual (Estilo Soporte/Index.vue) -->
             <div
-                :class="[
-                    'space-y-4 rounded-2xl border p-6 shadow-2xs transition',
-                    empresa.en_contingencia
-                        ? 'border-amber-300 bg-amber-50/50'
-                        : 'border-slate-200/80 bg-white'
-                ]"
+                v-if="empresa.en_contingencia"
+                class="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-5 shadow-2xs"
             >
-                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <div class="flex items-center gap-3">
-                        <div
-                            :class="[
-                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
-                                empresa.en_contingencia
-                                    ? 'bg-amber-500 text-white shadow-xs'
-                                    : 'bg-emerald-50 text-emerald-600'
-                            ]"
-                        >
-                            <svg v-if="empresa.en_contingencia" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                             </svg>
                         </div>
                         <div>
-                            <h2 class="text-sm font-bold text-slate-900">
-                                {{ empresa.en_contingencia ? 'Modo de Contingencia Activo en Portal Público' : 'Portal Público Operando con Normalidad' }}
-                            </h2>
-                            <p class="text-xs text-slate-500">
-                                {{ empresa.en_contingencia ? 'El formulario digital público está suspendido con aviso de contingencia.' : 'El formulario digital de reclamaciones está disponible y recibiendo registros de consumidores.' }}
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-bold text-amber-950">
+                                    Modo de Contingencia ACTIVO en Portal Público
+                                </h3>
+                                <span class="rounded-full bg-amber-200 px-2.5 py-0.5 text-[10px] font-black text-amber-900">
+                                    Alerta Pública
+                                </span>
+                            </div>
+                            <p class="text-xs text-amber-900/80 mt-1 leading-relaxed">
+                                {{ empresa.contingencia_mensaje }}
                             </p>
+                            <div class="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-semibold text-amber-900">
+                                <span v-if="empresa.contingencia_activada_en" class="flex items-center gap-1.5">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                    Activado: {{ empresa.contingencia_activada_en }}
+                                </span>
+                                <span v-if="empresa.contingencia_estimada_fin" class="text-amber-800">
+                                    • Fin estimado: {{ empresa.contingencia_estimada_fin }}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <span
-                        :class="[
-                            'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase',
-                            empresa.en_contingencia
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-emerald-100 text-emerald-800'
-                        ]"
+
+                    <button
+                        type="button"
+                        @click="modalDesactivar = true"
+                        class="shrink-0 cursor-pointer rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition"
                     >
-                        {{ empresa.en_contingencia ? 'Alerta Pública Activa' : 'Operativo 100%' }}
-                    </span>
-                </div>
-
-                <div v-if="empresa.en_contingencia" class="rounded-xl border border-amber-200 bg-white p-4">
-                    <p class="text-xs font-semibold text-amber-900">
-                        {{ empresa.contingencia_mensaje }}
-                    </p>
-                    <div v-if="empresa.contingencia_activada_en" class="mt-3 flex flex-wrap items-center gap-4 text-[11px] font-semibold text-amber-800">
-                        <span class="flex items-center gap-1.5">
-                            <span class="h-2 w-2 rounded-full bg-amber-500"></span>
-                            Activado el: {{ empresa.contingencia_activada_en }}
-                        </span>
-                        <span v-if="empresa.contingencia_estimada_fin" class="text-slate-500">
-                            • Fin estimado: {{ empresa.contingencia_estimada_fin }}
-                        </span>
-                    </div>
-                </div>
-
-                <div v-else class="text-xs text-slate-600">
-                    <p>
-                        Todos los servicios de recepción de quejas, reclamaciones y generación de comprobantes digitales están funcionando sin interrupciones.
-                    </p>
+                        Desactivar Inmediatamente
+                    </button>
                 </div>
             </div>
 
-            <!-- Card 2: Canales Alternativos de Atención (Estilo Create.vue) -->
-            <div class="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs">
-                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 class="text-sm font-bold text-slate-900">Canales Alternativos de Atención</h2>
-                        <p class="text-xs text-slate-500">Medios de respaldo visibles al consumidor en caso de indisponibilidad técnica.</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div class="rounded-xl border border-slate-100 bg-slate-50/70 p-4 transition hover:bg-slate-50">
-                        <div class="flex items-center gap-2 text-slate-400">
-                            <svg class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <!-- Card 2: Canales Alternativos de Atención (Estilo Tarjetas Empresa) -->
+            <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Correo de Emergencia</span>
                         </div>
-                        <p class="mt-2 text-xs font-bold text-slate-800 truncate" :title="empresa.contingencia_canal_alternativo?.email">
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-900">Canales Alternativos de Atención</h2>
+                            <p class="text-xs text-slate-500">Medios de respaldo visibles al consumidor en caso de indisponibilidad técnica.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-xl border border-slate-100 bg-slate-50/70 p-4 transition hover:bg-slate-50">
+                        <div class="flex items-center gap-2">
+                            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100/70 text-blue-600">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Correo Oficial</span>
+                        </div>
+                        <p class="mt-3 text-xs font-bold text-slate-900 truncate" :title="empresa.contingencia_canal_alternativo?.email">
                             {{ empresa.contingencia_canal_alternativo?.email || 'No asignado' }}
                         </p>
+                        <p class="mt-0.5 text-[10px] text-slate-400 font-medium">Recepción digital directa</p>
                     </div>
 
                     <div class="rounded-xl border border-slate-100 bg-slate-50/70 p-4 transition hover:bg-slate-50">
-                        <div class="flex items-center gap-2 text-slate-400">
-                            <svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Teléfono / WhatsApp</span>
+                        <div class="flex items-center gap-2">
+                            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100/70 text-emerald-600">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Línea Telefónica</span>
                         </div>
-                        <p class="mt-2 text-xs font-bold text-slate-800 truncate" :title="empresa.contingencia_canal_alternativo?.telefono">
+                        <p class="mt-3 text-xs font-bold text-slate-900 truncate" :title="empresa.contingencia_canal_alternativo?.telefono">
                             {{ empresa.contingencia_canal_alternativo?.telefono || 'No asignado' }}
                         </p>
+                        <p class="mt-0.5 text-[10px] text-slate-400 font-medium">Central telefónica / WhatsApp</p>
                     </div>
 
                     <div class="rounded-xl border border-slate-100 bg-slate-50/70 p-4 transition hover:bg-slate-50">
-                        <div class="flex items-center gap-2 text-slate-400">
-                            <svg class="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Libro Físico / Domicilio</span>
+                        <div class="flex items-center gap-2">
+                            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100/70 text-amber-600">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Libro Físico</span>
                         </div>
-                        <p class="mt-2 text-xs font-bold text-slate-800 truncate" :title="empresa.contingencia_canal_alternativo?.direccion_fisica">
+                        <p class="mt-3 text-xs font-bold text-slate-900 truncate" :title="empresa.contingencia_canal_alternativo?.direccion_fisica">
                             {{ empresa.contingencia_canal_alternativo?.direccion_fisica || 'No asignado' }}
                         </p>
+                        <p class="mt-0.5 text-[10px] text-slate-400 font-medium">Sede física declarada</p>
                     </div>
 
                     <div class="rounded-xl border border-slate-100 bg-slate-50/70 p-4 transition hover:bg-slate-50">
-                        <div class="flex items-center gap-2 text-slate-400">
-                            <svg class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                        <div class="flex items-center gap-2">
+                            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100/70 text-indigo-600">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
                             <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Horario de Atención</span>
                         </div>
-                        <p class="mt-2 text-xs font-bold text-slate-800 truncate" :title="empresa.contingencia_canal_alternativo?.horario">
+                        <p class="mt-3 text-xs font-bold text-slate-900 truncate" :title="empresa.contingencia_canal_alternativo?.horario">
                             {{ empresa.contingencia_canal_alternativo?.horario || 'Lunes a Viernes' }}
                         </p>
+                        <p class="mt-0.5 text-[10px] text-slate-400 font-medium">Ventanilla de reclamos</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Card 3: Bitácora Legal de Incidentes y Ensayos (Estilo Create.vue) -->
-            <div class="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <!-- Card 3: Bitácora Legal de Incidentes y Ensayos (Estilo Tabla Limpia Empresa) -->
+            <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -336,54 +330,54 @@ const claseCampo =
                             <p class="text-xs text-slate-500">Trazabilidad obligatoria de periodos de contingencia y simulacros documentados.</p>
                         </div>
                     </div>
-                    <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
+                    <span class="rounded-lg bg-slate-100 px-3 py-1 font-mono text-xs font-bold text-slate-700">
                         {{ incidentes.length }} registros
                     </span>
                 </div>
 
-                <div v-if="incidentes.length === 0" class="rounded-xl border border-dashed border-slate-200 py-12 text-center">
-                    <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div v-if="incidentes.length === 0" class="py-14 text-center">
+                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                     </div>
-                    <p class="mt-3 text-xs font-semibold text-slate-600">Sin eventos registrados</p>
-                    <p class="mt-1 text-[11px] text-slate-400">No se han registrado eventos de contingencia técnica ni simulacros en este periodo.</p>
+                    <p class="mt-3 text-sm font-bold text-slate-800">Sin eventos de contingencia</p>
+                    <p class="mt-1 text-xs text-slate-500">No se han registrado eventos técnicos ni simulacros en este periodo.</p>
                 </div>
 
-                <div v-else class="overflow-x-auto rounded-xl border border-slate-200/80">
+                <div v-else class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        <thead class="bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                             <tr>
-                                <th class="px-4 py-3">Tipo / Título</th>
-                                <th class="px-4 py-3">Inicio</th>
-                                <th class="px-4 py-3">Cierre</th>
-                                <th class="px-4 py-3">Iniciado Por</th>
-                                <th class="px-4 py-3">Estado</th>
-                                <th class="px-4 py-3">Detalle / Resultado</th>
+                                <th class="px-5 py-3">Tipo / Título</th>
+                                <th class="px-5 py-3">Inicio</th>
+                                <th class="px-5 py-3">Cierre</th>
+                                <th class="px-5 py-3">Iniciado Por</th>
+                                <th class="px-5 py-3">Estado</th>
+                                <th class="px-5 py-3">Detalle / Resultado</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100 bg-white">
-                            <tr v-for="inc in incidentes" :key="inc.id" class="transition hover:bg-slate-50/60">
-                                <td class="px-4 py-3.5">
+                        <tbody class="divide-y divide-slate-100 text-slate-600">
+                            <tr v-for="inc in incidentes" :key="inc.id" class="transition-colors hover:bg-slate-50/70">
+                                <td class="px-5 py-3.5">
                                     <div class="font-bold text-slate-900">{{ inc.titulo }}</div>
                                     <div class="text-[11px] text-slate-500 capitalize">{{ inc.tipo.replace('_', ' ') }}</div>
                                 </td>
-                                <td class="whitespace-nowrap px-4 py-3.5 font-medium text-slate-600">
+                                <td class="whitespace-nowrap px-5 py-3.5 font-mono text-[11px] text-slate-600">
                                     {{ inc.iniciado_en || '—' }}
                                 </td>
-                                <td class="whitespace-nowrap px-4 py-3.5 font-medium text-slate-600">
+                                <td class="whitespace-nowrap px-5 py-3.5 font-mono text-[11px] text-slate-600">
                                     {{ inc.finalizado_en || 'En curso' }}
                                 </td>
-                                <td class="whitespace-nowrap px-4 py-3.5 font-semibold text-slate-700">
+                                <td class="whitespace-nowrap px-5 py-3.5 text-[11px] font-semibold text-slate-700">
                                     {{ inc.iniciado_por || 'Sistema' }}
                                 </td>
-                                <td class="whitespace-nowrap px-4 py-3.5">
-                                    <span :class="['inline-flex rounded-md px-2 py-0.5 text-[10px]', estadoBadge(inc).clase]">
+                                <td class="whitespace-nowrap px-5 py-3.5">
+                                    <span :class="['inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1', estadoBadge(inc).clase]">
                                         {{ estadoBadge(inc).texto }}
                                     </span>
                                 </td>
-                                <td class="max-w-xs truncate px-4 py-3.5 text-slate-600" :title="inc.resultado_ensayo || inc.descripcion">
+                                <td class="max-w-xs truncate px-5 py-3.5 text-slate-600" :title="inc.resultado_ensayo || inc.descripcion">
                                     {{ inc.resultado_ensayo || inc.descripcion }}
                                 </td>
                             </tr>

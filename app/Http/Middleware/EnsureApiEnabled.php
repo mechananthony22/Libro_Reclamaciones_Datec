@@ -31,6 +31,18 @@ class EnsureApiEnabled
             ], Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
+        // Si se configuró una API Key global, validar autenticidad de la petición
+        $requiredKey = config('services.api.key');
+        if ($requiredKey) {
+            $apiKey = $request->header('X-API-Key') ?: $request->bearerToken();
+            if (! $apiKey || ! hash_equals($requiredKey, $apiKey)) {
+                return response()->json([
+                    'error' => 'no_autorizado',
+                    'mensaje' => 'Se requiere una API Key válida en la cabecera X-API-Key o Authorization: Bearer.',
+                ], Response::HTTP_UNAUTHORIZED);
+            }
+        }
+
         return $next($request);
     }
 }

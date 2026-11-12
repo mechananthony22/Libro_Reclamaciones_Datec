@@ -159,6 +159,42 @@ class ExpedienteController extends Controller
     }
 
     /**
+     * Valida los permisos de modificación sobre los expedientes del tenant.
+     * Los miembros activos de la empresa pueden modificar libremente.
+     * El Superadministrador puede visualizar en modo supervisión, pero solo puede
+     * modificar, responder o reasignar si cuenta con una autorización de soporte técnico activa otorgada por la empresa.
+     */
+    protected function validarAccesoModificacion(Request $request, Empresa $empresa): void
+    {
+        $user = $request->user();
+        if (! $user) {
+            abort(401);
+        }
+
+        $esMiembroDirecto = $user->empresas()
+            ->where('tenants.id', $empresa->id)
+            ->wherePivot('activo', true)
+            ->exists();
+
+        if ($esMiembroDirecto) {
+            return;
+        }
+
+        // Si es Superadmin, verificar si cuenta con ticket de soporte técnico activo
+        if ($user->isSuperAdmin()) {
+            $autorizacion = $empresa->autorizacionSoporteActiva();
+
+            if ($autorizacion) {
+                return;
+            }
+
+            abort(403, 'Acceso de solo lectura: el superadministrador puede supervisar expedientes, pero para modificarlos o emitir respuestas se requiere una autorización de soporte técnico activa otorgada por la empresa.');
+        }
+
+        abort(403, 'Acceso denegado: no cuentas con permisos para modificar expedientes de esta empresa.');
+    }
+
+    /**
      * Muestra la bandeja de expedientes con filtros por estado, tipo, sede, rango de fechas y búsqueda.
      */
     public function index(Request $request): Response
@@ -624,6 +660,8 @@ class ExpedienteController extends Controller
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
 
+        $this->validarAccesoModificacion($request, $empresa);
+
         $reclamacion = Reclamacion::where('empresa_id', $empresa->id)->findOrFail($id);
 
         $usuarioId = $request->validated('usuario_id');
@@ -696,6 +734,8 @@ class ExpedienteController extends Controller
     {
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
+
+        $this->validarAccesoModificacion($request, $empresa);
 
         $reclamacion = Reclamacion::where('empresa_id', $empresa->id)->findOrFail($id);
 
@@ -770,6 +810,8 @@ class ExpedienteController extends Controller
     {
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
+
+        $this->validarAccesoModificacion($request, $empresa);
 
         $reclamacion = Reclamacion::where('empresa_id', $empresa->id)->findOrFail($id);
 
@@ -884,10 +926,12 @@ class ExpedienteController extends Controller
     /**
      * Reintenta manualmente la notificación por correo de la respuesta formal.
      */
-    public function reenviarNotificacionRespuesta(int $id, int $respuestaId): RedirectResponse
+    public function reenviarNotificacionRespuesta(Request $request, int $id, int $respuestaId): RedirectResponse
     {
         /** @var Empresa $empresa */
         $empresa = Empresa::current();
+
+        $this->validarAccesoModificacion($request, $empresa);
 
         $reclamacion = Reclamacion::where('empresa_id', $empresa->id)->findOrFail($id);
         $respuesta = ReclamacionRespuesta::where('empresa_id', $empresa->id)
