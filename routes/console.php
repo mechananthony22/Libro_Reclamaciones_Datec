@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\PurgarAuditoriaAntiguaCommand;
+use App\Console\Commands\PurgarBajasRetencionVencidaCommand;
 use App\Console\Commands\VerificarSaludPlataformaCommand;
 use App\Console\Commands\VerificarVencimientosReclamacionesCommand;
 use Illuminate\Foundation\Inspiring;
@@ -33,5 +34,11 @@ Schedule::command(VerificarSaludPlataformaCommand::class)
 // Mantenimiento y depuración mensual de registros de auditoría que superan el plazo legal (24 meses)
 Schedule::command(PurgarAuditoriaAntiguaCommand::class)
     ->monthlyOn(1, '02:00')
+    ->timezone('America/Lima')
+    ->withoutOverlapping();
+
+// Purga automática diaria de paquetes de custodia cuyo plazo de retención legal (retencion_hasta) ha expirado
+Schedule::command(PurgarBajasRetencionVencidaCommand::class)
+    ->dailyAt('03:00')
     ->timezone('America/Lima')
     ->withoutOverlapping();

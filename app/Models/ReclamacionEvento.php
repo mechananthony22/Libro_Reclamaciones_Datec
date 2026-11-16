@@ -22,6 +22,20 @@ class ReclamacionEvento extends Model
     public $timestamps = false;
 
     /**
+     * Reglas del modelo para salvaguardar la inmutabilidad de los eventos de auditoría del expediente.
+     */
+    protected static function booted(): void
+    {
+        static::updating(function () {
+            throw new \DomainException('Los eventos de trazabilidad de reclamaciones son estrictamente inmutables y no pueden modificarse.');
+        });
+
+        static::deleting(function () {
+            throw new \DomainException('La eliminación de eventos de expedientes está estrictamente prohibida por normativa legal.');
+        });
+    }
+
+    /**
      * Atributos asignables de forma masiva.
      */
     protected $fillable = [

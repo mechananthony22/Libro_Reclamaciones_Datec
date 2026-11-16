@@ -6,13 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Publico\ConsultarEstadoReclamacionRequest;
 use App\Models\Empresa;
 use App\Models\Reclamacion;
+use App\Models\ReclamacionRespuesta;
 use App\Services\PdfConstanciaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Controlador de consulta pública segura del estado de expedientes de reclamación.
@@ -185,7 +188,24 @@ class ConsultaEstadoController extends Controller
                 'autor_cargo' => $ultimaRespuesta->autor_cargo,
                 'version' => $ultimaRespuesta->version,
                 'fecha_respuesta' => $ultimaRespuesta->fecha_respuesta?->format('d/m/Y H:i:s') ?? $ultimaRespuesta->created_at?->format('d/m/Y H:i:s'),
-                'adjuntos' => $ultimaRespuesta->adjuntos_paths ?? [],
+                'adjuntos' => collect($ultimaRespuesta->adjuntos_paths ?? [])->map(function ($adj, int $idx) use ($empresa, $reclamacion, $ultimaRespuesta) {
+                    $nombre = is_array($adj) ? ($adj['nombre'] ?? basename($adj['path'] ?? 'adjunto')) : basename($adj);
+                    $tamanoBytes = is_array($adj) ? ($adj['tamano_bytes'] ?? null) : null;
+                    $mimeType = is_array($adj) ? ($adj['mime_type'] ?? null) : null;
+
+                    return [
+                        'indice' => $idx,
+                        'nombre' => $nombre,
+                        'tamano_kb' => $tamanoBytes ? round($tamanoBytes / 1024, 1) : null,
+                        'mime_type' => $mimeType,
+                        'url_descarga' => route('libro.consulta.respuesta.adjunto', [
+                            'slug' => $empresa->slug,
+                            'token' => $reclamacion->token_consulta,
+                            'respuestaId' => $ultimaRespuesta->id,
+                            'indice' => $idx,
+                        ]),
+                    ];
+                })->values()->all(),
             ];
         }
 
@@ -247,5 +267,37 @@ class ConsultaEstadoController extends Controller
         }
 
         return str_repeat('*', $len - 3).substr($documento, -3);
+    }
+
+    /**
+     * Permite al consumidor descargar de forma segura un adjunto de la respuesta formal.
+     */
+    public function descargarAdjuntoRespuesta(Request $request, string $slug, string $token, int $respuestaId, int $indice): StreamedResponse
+    {
+        /** @var Empresa $empresa */
+        $empresa = Empresa::current() ?? Empresa::where('slug', $slug)->firstOrFail();
+
+        $reclamacion = Reclamacion::where('empresa_id', $empresa->id)
+            ->where('token_consulta', $token)
+            ->firstOrFail();
+
+        $respuesta = ReclamacionRespuesta::where('empresa_id', $empresa->id)
+            ->where('reclamacion_id', $reclamacion->id)
+            ->findOrFail($respuestaId);
+
+        $adjuntos = $respuesta->adjuntos_paths ?? [];
+        if (! isset($adjuntos[$indice])) {
+            abort(404, 'El archivo adjunto solicitado no existe.');
+        }
+
+        $adj = $adjuntos[$indice];
+        $path = is_array($adj) ? ($adj['path'] ?? '') : $adj;
+        $nombre = is_array($adj) ? ($adj['nombre'] ?? basename($path)) : basename($path);
+
+        if (! Storage::disk('local')->exists($path)) {
+            abort(404, 'El archivo solicitado no se encuentra en el repositorio.');
+        }
+
+        return Storage::disk('local')->download($path, $nombre);
     }
 }

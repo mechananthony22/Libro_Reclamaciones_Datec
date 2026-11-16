@@ -115,4 +115,6 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    'datec_alertas_email' => env('DATEC_ALERTAS_EMAIL', 'soporte@datec.pe'),
+
 ];

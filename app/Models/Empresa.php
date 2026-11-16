@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\EstadoEmpresa;
 use App\Enums\EstadoSuscripcion;
 use App\Enums\PlanEmpresa;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Multitenancy\Models\Tenant;
@@ -98,6 +99,14 @@ class Empresa extends Tenant
     public function invitaciones(): HasMany
     {
         return $this->hasMany(InvitacionEmpresa::class, 'empresa_id');
+    }
+
+    /**
+     * @return HasMany<Reclamacion, $this>
+     */
+    public function reclamaciones(): HasMany
+    {
+        return $this->hasMany(Reclamacion::class, 'empresa_id');
     }
 
     /**
@@ -228,9 +237,71 @@ class Empresa extends Tenant
         return array_values(array_unique(array_filter($emails, fn ($e) => filter_var($e, FILTER_VALIDATE_EMAIL))));
     }
 
+    public function isSuscripcionCancelada(): bool
+    {
+        return $this->estado_suscripcion === EstadoSuscripcion::Cancelada;
+    }
+
+    public function isSuscripcionVencida(): bool
+    {
+        return $this->estado_suscripcion === EstadoSuscripcion::Vencida
+            || ($this->vigencia_hasta !== null && $this->vigencia_hasta->isPast() && ! $this->vigencia_hasta->isToday());
+    }
+
     public function isActiva(): bool
     {
-        return $this->activo && $this->estado === EstadoEmpresa::Activa;
+        if (! $this->activo || $this->estado !== EstadoEmpresa::Activa) {
+            return false;
+        }
+
+        if ($this->isSuscripcionCancelada() || $this->isSuscripcionVencida()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Calcula la cantidad de reclamaciones registradas por la empresa en el mes en curso.
+     */
+    public function reclamacionesMesActualCount(): int
+    {
+        $inicioMes = now('America/Lima')->startOfMonth();
+        $finMes = now('America/Lima')->endOfMonth();
+
+        return $this->reclamaciones()
+            ->whereBetween('fecha_hora', [$inicioMes, $finMes])
+            ->count();
+    }
+
+    /**
+     * Determina si la empresa ha alcanzado o superado su cuota mensual contratada.
+     */
+    public function haSuperadoLimiteMensual(): bool
+    {
+        $limite = $this->limite_reclamaciones_mes;
+        if (! $limite || $limite <= 0) {
+            return false;
+        }
+
+        return $this->reclamacionesMesActualCount() >= $limite;
+    }
+
+    /**
+     * Obtiene el límite efectivo de reclamaciones mensuales según configuración o plan.
+     */
+    public function limiteEfectivoReclamacionesMes(): ?int
+    {
+        if ($this->limite_reclamaciones_mes && $this->limite_reclamaciones_mes > 0) {
+            return $this->limite_reclamaciones_mes;
+        }
+
+        return match ($this->plan) {
+            PlanEmpresa::Basico => 100,
+            PlanEmpresa::Pro => 500,
+            PlanEmpresa::Corporativo => null,
+            default => null,
+        };
     }
 
     public function isSuspendida(): bool

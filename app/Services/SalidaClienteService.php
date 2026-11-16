@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Enums\EstadoEmpresa;
+use App\Enums\EstadoSuscripcion;
 use App\Models\AuditoriaLog;
 use App\Models\Empresa;
+use App\Models\InvitacionEmpresa;
 use App\Models\Reclamacion;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +49,7 @@ class SalidaClienteService
 
         // 2. FASE PREVIA: Construir y sellar el paquete de custodia en disco antes de alterar la BD
         // Si la generación de PDFs, memoria, espacio en disco o ZIP falla, la empresa y usuarios quedan 100% intactos
-        $paquete = $this->generarPaqueteCustodia($empresa, $actor);
+        $paquete = $this->generarPaqueteCustodia($empresa, $actor, $mesesRetencion);
 
         // 3. FASE ATÓMICA DE BASE DE DATOS: Aplicar la baja en una sola transacción
         try {
@@ -55,6 +57,7 @@ class SalidaClienteService
                 // A. Actualizar estado del tenant a Baja Programada y registrar sellado
                 $empresa->update([
                     'estado' => EstadoEmpresa::BajaProgramada,
+                    'estado_suscripcion' => EstadoSuscripcion::Cancelada,
                     'activo' => false,
                     'fecha_baja' => $fechaBaja,
                     'motivo_baja' => $motivo,
@@ -74,11 +77,14 @@ class SalidaClienteService
                         'updated_at' => now(),
                     ]);
 
-                // C. Asentar en la bitácora de auditoría
+                // C. Cancelar invitaciones pendientes para impedir activaciones huérfanas posteriores
+                InvitacionEmpresa::where('empresa_id', $empresa->id)->delete();
+
+                // D. Asentar en la bitácora de auditoría
                 $this->auditoriaService->registrar(
                     accion: 'baja_empresa',
                     modulo: 'empresas',
-                    descripcion: "Baja formal ejecutada para {$empresa->razon_social}. Retención legal hasta {$retencionHasta} (plazo: {$mesesRetencion} meses). Accesos de usuarios revocados.",
+                    descripcion: "Baja formal ejecutada para {$empresa->razon_social}. Retención legal hasta {$retencionHasta} (plazo: {$mesesRetencion} meses). Accesos de usuarios revocados e invitaciones canceladas.",
                     opciones: [
                         'empresa_id' => $empresa->id,
                         'user' => $actor,
@@ -114,7 +120,7 @@ class SalidaClienteService
      *
      * @return array{path: string, filename: string, hash: string, size: int}
      */
-    public function generarPaqueteCustodia(Empresa $empresa, ?User $actor = null): array
+    public function generarPaqueteCustodia(Empresa $empresa, ?User $actor = null, int $mesesRetencion = 24): array
     {
         $this->validarRequisitosPlataforma();
 
@@ -153,7 +159,7 @@ class SalidaClienteService
         unset($csvAuditoria);
 
         // C. Generar Acta de Entrega y Custodia Legal
-        $actaTexto = $this->generarActaCustodiaTexto($empresa, $actor);
+        $actaTexto = $this->generarActaCustodiaTexto($empresa, $actor, $mesesRetencion);
         $zip->addFromString('ACTA_CUSTODIA_LEGAL.txt', $actaTexto);
         unset($actaTexto);
 
@@ -378,10 +384,10 @@ class SalidaClienteService
     /**
      * Redacta el documento formal de custodia probatoria para constancia legal.
      */
-    protected function generarActaCustodiaTexto(Empresa $empresa, ?User $actor = null): string
+    protected function generarActaCustodiaTexto(Empresa $empresa, ?User $actor = null, int $mesesRetencion = 24): string
     {
         $fechaActual = now()->toDayDateTimeString();
-        $retencionHasta = $empresa->retencion_hasta ? $empresa->retencion_hasta->format('Y-m-d') : now()->addMonths(24)->format('Y-m-d');
+        $retencionHasta = $empresa->retencion_hasta ? $empresa->retencion_hasta->format('Y-m-d') : now()->addMonths($mesesRetencion)->format('Y-m-d');
         $totalExpedientes = Reclamacion::withoutGlobalScopes()->where('empresa_id', $empresa->id)->count();
         $totalLogs = AuditoriaLog::where('empresa_id', $empresa->id)->count();
         $autorizadoPor = $actor ? "{$actor->name} ({$actor->email})" : 'Administración Central Datec';
@@ -398,7 +404,7 @@ EMAIL DE CONTACTO: {$empresa->email}
 FECHA DE GENERACIÓN: {$fechaActual}
 AUTORIZADO POR: {$autorizadoPor}
 ESTADO DE PLATAFORMA: BAJA PROGRAMADA / CUSTODIA DE PRUEBAS
-PLAZO DE RETENCIÓN LEGAL HASTA: {$retencionHasta} (24 meses calendario)
+PLAZO DE RETENCIÓN LEGAL HASTA: {$retencionHasta} ({$mesesRetencion} meses calendario)
 
 RESUMEN DE EXPEDIENTES Y EVIDENCIAS CUSTODIADAS:
 - Total de reclamaciones y quejas registradas: {$totalExpedientes}

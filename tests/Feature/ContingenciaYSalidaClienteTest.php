@@ -1,8 +1,10 @@
 <?php
 
+use App\Actions\Reclamaciones\RegistrarReclamacionAction;
 use App\Enums\DecisionRespuesta;
 use App\Enums\EstadoEmpresa;
 use App\Enums\EstadoReclamacion;
+use App\Enums\EstadoSuscripcion;
 use App\Enums\PlanEmpresa;
 use App\Enums\RolEmpresa;
 use App\Enums\TipoBien;
@@ -10,6 +12,8 @@ use App\Enums\TipoReclamacion;
 use App\Models\ContingenciaIncidente;
 use App\Models\Empresa;
 use App\Models\Establecimiento;
+use App\Models\InvitacionEmpresa;
+use App\Models\PlataformaAlerta;
 use App\Models\Reclamacion;
 use App\Models\ReclamacionRespuesta;
 use App\Models\User;
@@ -260,7 +264,8 @@ test('procesar baja formal de cliente revoca accesos de usuarios y programa rete
         ->and($this->empresa->activo)->toBeFalse()
         ->and($this->empresa->fecha_baja)->not->toBeNull()
         ->and($this->empresa->retencion_hasta->toDateString())->toBe('2028-11-09') // 24 meses desde 2026-11-09
-        ->and($this->empresa->salida_autorizada_por_id)->toBe($this->superadmin->id);
+        ->and($this->empresa->salida_autorizada_por_id)->toBe($this->superadmin->id)
+        ->and($this->empresa->salidaAutorizadaPor->id)->toBe($this->superadmin->id);
 
     // Criterio de aceptación: revocación inmediata de accesos del cliente
     $usuarioVinculoActualizado = DB::table('empresa_usuario')
@@ -458,4 +463,163 @@ test('superadministrador puede descargar el paquete de custodia probatoria vía 
 
     $response->assertOk();
     $response->assertHeader('content-type', 'application/zip');
+});
+
+test('cambiarEstado en EmpresaController no permite seleccionar baja_programada directamente', function () {
+    $response = $this->actingAs($this->superadmin)
+        ->patch("/admin/empresas/{$this->empresa->id}/estado", [
+            'estado' => EstadoEmpresa::BajaProgramada->value,
+            'motivo' => 'Intento de baja sin paquete legal',
+        ]);
+
+    $response->assertSessionHasErrors(['estado']);
+    expect($this->empresa->fresh()->estado)->toBe(EstadoEmpresa::Activa);
+});
+
+test('cambiarEstado bloquea la reactivacion de una empresa bajo custodia legal de baja programada', function () {
+    $this->empresa->update([
+        'estado' => EstadoEmpresa::BajaProgramada,
+        'activo' => false,
+        'retencion_hasta' => now()->addMonths(24)->toDateString(),
+    ]);
+
+    $response = $this->actingAs($this->superadmin)
+        ->patch("/admin/empresas/{$this->empresa->id}/estado", [
+            'estado' => EstadoEmpresa::Activa->value,
+            'motivo' => 'Intento de reactivación indebida',
+        ]);
+
+    $response->assertSessionHasErrors(['estado']);
+    expect($this->empresa->fresh()->estado)->toBe(EstadoEmpresa::BajaProgramada);
+});
+
+test('la baja formal cancela invitaciones pendientes, cancela la suscripcion y refleja plazo exacto en el acta', function () {
+    InvitacionEmpresa::create([
+        'empresa_id' => $this->empresa->id,
+        'email' => 'pendiente@andina.pe',
+        'rol' => RolEmpresa::AdminEmpresa->value,
+        'token' => 'token-pendiente-12345678901234567890123456789012',
+        'expires_at' => now()->addDays(2),
+    ]);
+
+    $resultado = app(SalidaClienteService::class)->procesarBaja(
+        $this->empresa,
+        'Cierre definitivo y custodia',
+        $this->superadmin,
+        36 // 36 meses
+    );
+
+    $this->empresa->refresh();
+    expect($this->empresa->estado_suscripcion)->toBe(EstadoSuscripcion::Cancelada);
+    expect($this->empresa->retencion_hasta->toDateString())->toBe(now()->addMonths(36)->toDateString());
+
+    // Invitación pendiente cancelada
+    $this->assertDatabaseMissing('invitaciones_empresa', [
+        'empresa_id' => $this->empresa->id,
+        'email' => 'pendiente@andina.pe',
+    ]);
+
+    // Verificar texto del acta dentro del ZIP
+    $zip = new ZipArchive;
+    $zip->open($resultado['paquete']['path']);
+    $acta = $zip->getFromName('ACTA_CUSTODIA_LEGAL.txt');
+    $zip->close();
+
+    expect($acta)->toContain('(36 meses calendario)');
+});
+
+test('comando artisan empresa:purgar-bajas-vencidas elimina custodias con retencion expirada', function () {
+    $empresaExpirada = Empresa::create([
+        'name' => 'Empresa Expirada SAC',
+        'razon_social' => 'EMPRESA EXPIRADA S.A.C.',
+        'ruc' => '20778899001',
+        'slug' => 'empresa-expirada',
+        'estado' => EstadoEmpresa::BajaProgramada,
+        'activo' => false,
+        'plan' => PlanEmpresa::Basico,
+        'retencion_hasta' => now()->subDay()->toDateString(),
+    ]);
+
+    // Simular archivo de custodia
+    $dir = storage_path("app/custodia/{$empresaExpirada->id}");
+    if (! is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    file_put_contents("{$dir}/dummy.zip", 'fake content');
+
+    $this->artisan('empresa:purgar-bajas-vencidas')
+        ->expectsOutputToContain('Purga completada para: Empresa Expirada SAC')
+        ->assertSuccessful();
+
+    expect(is_dir($dir))->toBeFalse();
+
+    $this->assertDatabaseHas('auditoria_logs', [
+        'empresa_id' => $empresaExpirada->id,
+        'accion' => 'retencion_legal_purgada',
+    ]);
+});
+
+test('empresa con vigencia expirada o suscripcion cancelada es considerada inactiva y bloqueada con 403', function () {
+    $this->empresa->update([
+        'vigencia_hasta' => now()->subDay()->toDateString(),
+    ]);
+
+    expect($this->empresa->isActiva())->toBeFalse();
+    expect($this->empresa->isSuscripcionVencida())->toBeTrue();
+
+    // Bloqueo en acceso público
+    $responsePublico = $this->get('/l/comercial-andina');
+    $responsePublico->assertStatus(403);
+
+    // Bloqueo en panel de administración
+    $responseAdmin = $this->actingAs($this->adminUsuario)
+        ->withSession(['current_tenant_id' => $this->empresa->id])
+        ->get('/dashboard');
+    $responseAdmin->assertStatus(403);
+});
+
+test('superar limite de reclamaciones mensuales contratado genera alerta en PlataformaAlerta y auditoria', function () {
+    $this->empresa->update([
+        'limite_reclamaciones_mes' => 1,
+    ]);
+
+    // Registrar primera reclamación (dentro de la cuota = 1)
+    $action = app(RegistrarReclamacionAction::class);
+    $datos = [
+        'tipo' => 'reclamo',
+        'tipo_bien' => 'servicio',
+        'descripcion_bien' => 'Servicio A',
+        'detalle_problema' => 'Problema con la conexión de red.',
+        'pedido_consumidor' => 'Reconexión del servicio.',
+        'tipo_documento' => 'dni',
+        'numero_documento' => '44556677',
+        'nombres' => 'Juan',
+        'apellidos' => 'Pérez',
+        'email' => 'juan@ejemplo.pe',
+        'telefono' => '998877665',
+        'direccion' => 'Av. Principal 123',
+        'aviso_privacidad' => true,
+    ];
+
+    $action->ejecutar($this->empresa, $datos);
+
+    // No debe haber alerta de exceso aún
+    expect(PlataformaAlerta::where('tipo', 'exceso_cuota_reclamaciones')->exists())->toBeFalse();
+
+    // Registrar segunda reclamación (supera la cuota > 1)
+    $datos['numero_documento'] = '44556678';
+    $action->ejecutar($this->empresa, $datos);
+
+    // Ahora debe haberse creado la alerta operativa
+    $alerta = PlataformaAlerta::where('tipo', 'exceso_cuota_reclamaciones')
+        ->where('titulo', "Exceso de cuota mensual: {$this->empresa->name}")
+        ->first();
+
+    expect($alerta)->not->toBeNull();
+    expect((int) $alerta->valor_actual)->toBe(2);
+
+    $this->assertDatabaseHas('auditoria_logs', [
+        'empresa_id' => $this->empresa->id,
+        'accion' => 'exceso_cuota_plan',
+    ]);
 });

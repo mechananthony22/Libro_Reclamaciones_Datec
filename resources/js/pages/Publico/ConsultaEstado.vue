@@ -324,6 +324,34 @@ function consultar() {
                         </div>
                     </div>
 
+                    <!-- Documentos / Adjuntos Oficiales de la Respuesta -->
+                    <div v-if="expediente.respuesta.adjuntos && expediente.respuesta.adjuntos.length > 0">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-800 block mb-1.5">
+                            Documentos Adjuntos a la Respuesta ({{ expediente.respuesta.adjuntos.length }}):
+                        </span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <a
+                                v-for="adj in expediente.respuesta.adjuntos"
+                                :key="adj.indice"
+                                :href="adj.url_descarga"
+                                download
+                                class="flex items-center justify-between p-2.5 rounded-xl border border-emerald-200 bg-white hover:bg-emerald-50/50 hover:border-emerald-300 transition text-xs group"
+                            >
+                                <div class="flex items-center gap-2 min-w-0 pr-2">
+                                    <svg class="h-4 w-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                    </svg>
+                                    <span class="font-medium text-slate-700 truncate group-hover:text-emerald-800" :title="adj.nombre">
+                                        {{ adj.nombre }}
+                                    </span>
+                                </div>
+                                <span class="text-[10px] text-slate-400 shrink-0 font-medium">
+                                    {{ adj.tamano_kb ? `${adj.tamano_kb} KB` : 'Descargar' }}
+                                </span>
+                            </a>
+                        </div>
+                    </div>
+
                     <div v-if="expediente.respuesta.autor_nombre" class="text-[11px] text-emerald-700 pt-1">
                         Atendido por: <strong>{{ expediente.respuesta.autor_nombre }}</strong>
                         <span v-if="expediente.respuesta.autor_cargo"> ({{ expediente.respuesta.autor_cargo }})</span>

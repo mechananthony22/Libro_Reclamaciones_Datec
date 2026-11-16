@@ -20,6 +20,20 @@ class AuditoriaLog extends Model
     public $timestamps = false;
 
     /**
+     * Reglas del modelo para salvaguardar la inmutabilidad de la bitácora central de auditoría.
+     */
+    protected static function booted(): void
+    {
+        static::updating(function () {
+            throw new \DomainException('Los registros de auditoría son inmutables y no pueden ser modificados.');
+        });
+
+        static::deleting(function () {
+            throw new \DomainException('La eliminación de registros individuales de auditoría está estrictamente prohibida.');
+        });
+    }
+
+    /**
      * Atributos asignables de forma masiva.
      *
      * @var array<string>

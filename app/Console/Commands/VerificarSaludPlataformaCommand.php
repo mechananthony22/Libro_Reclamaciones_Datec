@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\SoporteAutorizacion;
 use App\Services\PlataformaSaludService;
 use Illuminate\Console\Command;
 
@@ -31,6 +32,12 @@ class VerificarSaludPlataformaCommand extends Command
     public function handle(PlataformaSaludService $saludService): int
     {
         $this->info('Evaluando disponibilidad, colas, fallos de mensajería y recursos...');
+
+        // Expirar automáticamente autorizaciones de soporte técnico cuyo plazo de vigencia concluyó
+        $expirados = SoporteAutorizacion::expirarVencidos();
+        if ($expirados > 0) {
+            $this->info("Se han expirado automáticamente {$expirados} autorización(es) de soporte técnico vencidas.");
+        }
 
         $diagnostico = $saludService->evaluarUmbralesYAlertar();
 

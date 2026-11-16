@@ -59,13 +59,21 @@ class ResolveTenantBySlug
             abort(404, 'Empresa no encontrada.');
         }
 
-        if (! $currentTenant->activo || $currentTenant->estado !== EstadoEmpresa::Activa) {
+        if (! $currentTenant->isActiva()) {
             if ($currentTenant->estado === EstadoEmpresa::BajaProgramada) {
                 abort(403, 'El servicio de este Libro de Reclamaciones ha concluido. La información se encuentra bajo custodia y política de retención legal de pruebas.');
             }
 
             if ($currentTenant->estado === EstadoEmpresa::Suspendida) {
                 abort(403, 'El servicio de este Libro de Reclamaciones se encuentra temporalmente suspendido.');
+            }
+
+            if ($currentTenant->isSuscripcionCancelada()) {
+                abort(403, 'La suscripción de este servicio ha sido cancelada.');
+            }
+
+            if ($currentTenant->isSuscripcionVencida()) {
+                abort(403, 'El periodo de vigencia de la suscripción de esta empresa ha expirado.');
             }
 
             if ($currentTenant->estado === EstadoEmpresa::Borrador) {

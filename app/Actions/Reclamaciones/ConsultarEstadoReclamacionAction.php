@@ -52,7 +52,7 @@ class ConsultarEstadoReclamacionAction
             'pedido_consumidor' => $reclamacion->pedido_consumidor,
             'respuesta' => $ultimaRespuesta?->propuesta_solucion,
             'fecha_respuesta' => $ultimaRespuesta?->fecha_respuesta?->format('d/m/Y H:i') ?? $ultimaRespuesta?->created_at?->format('d/m/Y H:i'),
-            'constancia_pdf_disponible' => (bool) $reclamacion->constancia_pdf_path,
+            'constancia_pdf_disponible' => true,
         ];
     }
 

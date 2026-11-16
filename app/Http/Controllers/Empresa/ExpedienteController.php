@@ -295,67 +295,61 @@ class ExpedienteController extends Controller
         $user = $request->user();
         $formato = strtolower((string) $request->input('formato', 'csv'));
 
-        $query = $this->construirConsultaFiltrada($request, $empresa->id)->orderBy('fecha_hora', 'desc');
-        $reclamaciones = $query->get();
+        $query = $this->construirConsultaFiltrada($request, $empresa->id)
+            ->with(['establecimiento', 'responsable', 'respuestas'])
+            ->orderBy('fecha_hora', 'desc');
 
+        $totalRegistros = (clone $query)->count();
         $timestamp = now('America/Lima')->format('Ymd_His');
         $filtrosAplicados = $request->only(['buscar', 'estado', 'tipo', 'establecimiento_id', 'fecha_desde', 'fecha_hasta']);
 
-        // Registrar auditoría del reporte exportado en los eventos de los expedientes involucrados
-        if ($reclamaciones->isNotEmpty()) {
-            $eventos = [];
-            $ahora = now();
-            $formatoUpper = strtoupper($formato);
-            foreach ($reclamaciones as $rec) {
-                $eventos[] = [
-                    'empresa_id' => $empresa->id,
-                    'reclamacion_id' => $rec->id,
-                    'actor_tipo' => 'usuario',
-                    'actor_id' => $user?->id,
-                    'actor_nombre' => $user?->name ?? 'Usuario interno',
-                    'accion' => 'expediente_exportado',
-                    'descripcion' => "Expediente incluido en reporte exportado ({$formatoUpper}) por ".($user?->name ?? 'Usuario'),
-                    'datos_despues' => json_encode([
-                        'formato' => $formato,
-                        'filtros' => $filtrosAplicados,
-                    ]),
-                    'ip' => $request->ip(),
-                    'user_agent' => substr((string) $request->userAgent(), 0, 500),
-                    'created_at' => $ahora,
-                ];
-            }
-            ReclamacionEvento::insert($eventos);
-        }
-
+        // Registrar auditoría general del reporte exportado en la plataforma
         app(AuditoriaService::class)->registrar(
             'expedientes_exportados',
             'expedientes',
-            'Exportación de expedientes en formato '.strtoupper($formato)." (Total: {$reclamaciones->count()} registros)",
+            'Exportación de expedientes en formato '.strtoupper($formato)." (Total: {$totalRegistros} registros)",
             [
                 'empresa_id' => $empresa->id,
                 'datos_despues' => [
                     'formato' => $formato,
-                    'total_registros' => $reclamaciones->count(),
-                    'filtros' => $filtrosAplicados,
-                ],
-            ]
-        );
-
-        app(AuditoriaService::class)->registrar(
-            'expedientes_exportados',
-            'expedientes',
-            'Exportación de expedientes en formato '.strtoupper($formato)." (Total: {$reclamaciones->count()} registros)",
-            [
-                'empresa_id' => $empresa->id,
-                'datos_despues' => [
-                    'formato' => $formato,
-                    'total_registros' => $reclamaciones->count(),
+                    'total_registros' => $totalRegistros,
                     'filtros' => $filtrosAplicados,
                 ],
             ]
         );
 
         if ($formato === 'pdf') {
+            // Para PDF se aplica un tope seguro para evitar desbordamiento de memoria en DomPDF
+            $limitePdf = 500;
+            $reclamaciones = $query->limit($limitePdf)->get();
+
+            if ($reclamaciones->isNotEmpty()) {
+                $eventos = [];
+                $ahora = now();
+                $formatoUpper = strtoupper($formato);
+                foreach ($reclamaciones as $rec) {
+                    $eventos[] = [
+                        'empresa_id' => $empresa->id,
+                        'reclamacion_id' => $rec->id,
+                        'actor_tipo' => 'usuario',
+                        'actor_id' => $user?->id,
+                        'actor_nombre' => $user?->name ?? 'Usuario interno',
+                        'accion' => 'expediente_exportado',
+                        'descripcion' => "Expediente incluido en reporte exportado ({$formatoUpper}) por ".($user?->name ?? 'Usuario'),
+                        'datos_despues' => json_encode([
+                            'formato' => $formato,
+                            'filtros' => $filtrosAplicados,
+                        ]),
+                        'ip' => $request->ip(),
+                        'user_agent' => substr((string) $request->userAgent(), 0, 500),
+                        'created_at' => $ahora,
+                    ];
+                }
+                foreach (array_chunk($eventos, 200) as $batch) {
+                    ReclamacionEvento::insert($batch);
+                }
+            }
+
             $expedientesTransformados = $reclamaciones->map(function (Reclamacion $rec) {
                 $consumidor = $rec->datos_consumidor ?? [];
                 $semaforo = $rec->vence_en
@@ -397,7 +391,7 @@ class ExpedienteController extends Controller
             ]);
         }
 
-        // Exportación en formato CSV con BOM UTF-8 para compatibilidad universal con Excel
+        // Exportación en formato CSV mediante streaming perezoso (cursor) para no sobrecargar memoria
         $nombreArchivo = "reclamaciones_{$empresa->slug}_{$timestamp}.csv";
 
         $headers = [
@@ -408,7 +402,7 @@ class ExpedienteController extends Controller
             'Expires' => '0',
         ];
 
-        $callback = function () use ($reclamaciones) {
+        $callback = function () use ($query, $empresa, $user, $formato, $filtrosAplicados, $request) {
             $handle = fopen('php://output', 'w');
 
             // BOM UTF-8
@@ -442,14 +436,24 @@ class ExpedienteController extends Controller
                 'Días Hábiles Restantes',
                 'Estado Semáforo',
                 'Responsable Asignado',
+                'Respuesta Formal',
+                'Fecha de Respuesta',
             ]);
 
-            foreach ($reclamaciones as $rec) {
+            $eventosBatch = [];
+            $ahora = now();
+            $formatoUpper = strtoupper($formato);
+            $ip = $request->ip();
+            $userAgent = substr((string) $request->userAgent(), 0, 500);
+
+            // Transmisión con cursor(): lee registro por registro sin hidratar colecciones completas en RAM
+            foreach ($query->cursor() as $rec) {
                 $consumidor = $rec->datos_consumidor ?? [];
                 $apoderado = $consumidor['apoderado'] ?? null;
                 $semaforo = $rec->vence_en
                     ? $this->plazoService->obtenerEstadoSemaforo($rec->vence_en, $rec->estado->value)
                     : null;
+                $ultimaRespuesta = $rec->respuestas->sortByDesc('fecha_respuesta')->first() ?? $rec->respuestas->sortByDesc('id')->first();
 
                 fputcsv($handle, [
                     $rec->numero_hoja,
@@ -463,7 +467,7 @@ class ExpedienteController extends Controller
                     $consumidor['numero_documento'] ?? '',
                     $consumidor['telefono'] ?? '',
                     $consumidor['email'] ?? '',
-                    $consumidor['domicilio'] ?? '',
+                    $consumidor['direccion'] ?? '',
                     ! empty($consumidor['es_menor_edad']) ? 'SÍ' : 'NO',
                     $apoderado['nombre'] ?? '',
                     $apoderado['numero_documento'] ?? '',
@@ -472,13 +476,42 @@ class ExpedienteController extends Controller
                     $rec->moneda ?? '',
                     $rec->monto_reclamado ?? '',
                     $rec->numero_comprobante ?? '',
-                    $rec->detalle,
-                    $rec->pedido,
+                    $rec->detalle_problema ?? '',
+                    $rec->pedido_consumidor ?? '',
                     $rec->vence_en?->format('d/m/Y') ?? '',
                     $semaforo['dias_restantes'] ?? '',
                     $semaforo['etiqueta'] ?? '',
                     $rec->responsable?->name ?? 'Sin asignar',
+                    $ultimaRespuesta?->propuesta_solucion ?? '',
+                    $ultimaRespuesta?->fecha_respuesta?->format('d/m/Y H:i') ?? $ultimaRespuesta?->created_at?->format('d/m/Y H:i') ?? '',
                 ]);
+
+                // Registrar auditoría por expediente en lotes seguros de 200
+                $eventosBatch[] = [
+                    'empresa_id' => $empresa->id,
+                    'reclamacion_id' => $rec->id,
+                    'actor_tipo' => 'usuario',
+                    'actor_id' => $user?->id,
+                    'actor_nombre' => $user?->name ?? 'Usuario interno',
+                    'accion' => 'expediente_exportado',
+                    'descripcion' => "Expediente incluido en reporte exportado ({$formatoUpper}) por ".($user?->name ?? 'Usuario'),
+                    'datos_despues' => json_encode([
+                        'formato' => $formato,
+                        'filtros' => $filtrosAplicados,
+                    ]),
+                    'ip' => $ip,
+                    'user_agent' => $userAgent,
+                    'created_at' => $ahora,
+                ];
+
+                if (count($eventosBatch) >= 200) {
+                    ReclamacionEvento::insert($eventosBatch);
+                    $eventosBatch = [];
+                }
+            }
+
+            if (! empty($eventosBatch)) {
+                ReclamacionEvento::insert($eventosBatch);
             }
 
             fclose($handle);
@@ -596,7 +629,23 @@ class ExpedienteController extends Controller
                     'fecha_respuesta' => $resp->fecha_respuesta?->format('d/m/Y H:i'),
                     'notificado' => $resp->notificado,
                     'notificado_en' => $resp->notificado_en?->format('d/m/Y H:i'),
-                    'adjuntos' => $resp->adjuntos_paths ?? [],
+                    'adjuntos' => collect($resp->adjuntos_paths ?? [])->map(function ($adj, int $idx) use ($reclamacion, $resp) {
+                        $nombre = is_array($adj) ? ($adj['nombre'] ?? basename($adj['path'] ?? 'adjunto')) : basename($adj);
+                        $tamanoBytes = is_array($adj) ? ($adj['tamano_bytes'] ?? null) : null;
+                        $mimeType = is_array($adj) ? ($adj['mime_type'] ?? null) : null;
+
+                        return [
+                            'indice' => $idx,
+                            'nombre' => $nombre,
+                            'tamano_kb' => $tamanoBytes ? round($tamanoBytes / 1024, 1) : null,
+                            'mime_type' => $mimeType,
+                            'url_descarga' => route('empresa.expedientes.respuestas.adjunto.descargar', [
+                                'id' => $reclamacion->id,
+                                'respuestaId' => $resp->id,
+                                'indice' => $idx,
+                            ]),
+                        ];
+                    })->values()->all(),
                 ]),
             ],
             'usuarios_asignables' => $usuariosEmpresa,
@@ -604,12 +653,19 @@ class ExpedienteController extends Controller
                 'value' => $d->value,
                 'label' => $d->label(),
             ], DecisionRespuesta::cases()),
-            'estados_disponibles' => array_map(fn (EstadoReclamacion $case) => [
-                'value' => $case->value,
-                'label' => $case->label(),
-                'es_actual' => $case === $reclamacion->estado,
-                'permitido' => $reclamacion->estado->puedeTransitarHacia($case),
-            ], EstadoReclamacion::cases()),
+            'estados_disponibles' => array_map(function (EstadoReclamacion $case) use ($reclamacion) {
+                $permitido = $reclamacion->estado->puedeTransitarHacia($case);
+                if (in_array($case, [EstadoReclamacion::Atendida, EstadoReclamacion::Cerrada], true) && $reclamacion->respuestas->isEmpty()) {
+                    $permitido = false;
+                }
+
+                return [
+                    'value' => $case->value,
+                    'label' => $case->label(),
+                    'es_actual' => $case === $reclamacion->estado,
+                    'permitido' => $permitido,
+                ];
+            }, EstadoReclamacion::cases()),
         ]);
     }
 
@@ -649,6 +705,37 @@ class ExpedienteController extends Controller
         }
 
         return Storage::disk('local')->download($adjunto->storage_path, $adjunto->nombre_original);
+    }
+
+    /**
+     * Descarga segura de un archivo adjunto a la respuesta formal previa validación de pertenencia al tenant.
+     */
+    public function descargarAdjuntoRespuesta(Request $request, int $id, int $respuestaId, int $indice)
+    {
+        /** @var Empresa $empresa */
+        $empresa = Empresa::current();
+
+        $this->validarAccesoContenido($request, $empresa);
+
+        $reclamacion = Reclamacion::where('empresa_id', $empresa->id)->findOrFail($id);
+        $respuesta = ReclamacionRespuesta::where('empresa_id', $empresa->id)
+            ->where('reclamacion_id', $reclamacion->id)
+            ->findOrFail($respuestaId);
+
+        $adjuntos = $respuesta->adjuntos_paths ?? [];
+        if (! isset($adjuntos[$indice])) {
+            abort(404, 'El archivo adjunto solicitado no existe.');
+        }
+
+        $adj = $adjuntos[$indice];
+        $path = is_array($adj) ? ($adj['path'] ?? '') : $adj;
+        $nombre = is_array($adj) ? ($adj['nombre'] ?? basename($path)) : basename($path);
+
+        if (! Storage::disk('local')->exists($path)) {
+            abort(404, 'El archivo solicitado no se encuentra en el repositorio.');
+        }
+
+        return Storage::disk('local')->download($path, $nombre);
     }
 
     /**
@@ -755,6 +842,15 @@ class ExpedienteController extends Controller
             ]);
         }
 
+        // Si se intenta pasar a Atendida o Cerrada, exigir que exista una respuesta formal registrada conforme a ley
+        if (in_array($nuevoEstado, [EstadoReclamacion::Atendida, EstadoReclamacion::Cerrada], true)) {
+            if (! $reclamacion->respuestas()->exists()) {
+                throw ValidationException::withMessages([
+                    'estado' => "No es posible cambiar el estado a '{$nuevoEstado->label()}' sin haber registrado una respuesta formal al consumidor. Por favor registre la respuesta formal en la sección correspondiente.",
+                ]);
+            }
+        }
+
         DB::transaction(function () use ($reclamacion, $empresa, $estadoActual, $nuevoEstado, $motivo, $request) {
             $reclamacion->update([
                 'estado' => $nuevoEstado,
@@ -775,17 +871,6 @@ class ExpedienteController extends Controller
                 'created_at' => now(),
             ]);
         });
-
-        app(AuditoriaService::class)->registrar(
-            'expediente_estado_cambiado',
-            'expedientes',
-            "Expediente {$reclamacion->numero_hoja}: cambio de estado '{$estadoActual->label()}' → '{$nuevoEstado->label()}'",
-            [
-                'empresa_id' => $empresa->id,
-                'datos_antes' => ['estado' => $estadoActual->value],
-                'datos_despues' => ['estado' => $nuevoEstado->value, 'motivo' => $motivo],
-            ]
-        );
 
         app(AuditoriaService::class)->registrar(
             'expediente_estado_cambiado',
@@ -891,20 +976,6 @@ class ExpedienteController extends Controller
         if ($notificar) {
             dispatch(new EnviarRespuestaReclamacionJob($reclamacion, $respuesta));
         }
-
-        app(AuditoriaService::class)->registrar(
-            'respuesta_formal_registrada',
-            'expedientes',
-            "Respuesta formal emitida para expediente {$reclamacion->numero_hoja} (Sentido: '{$decision->label()}', v{$respuesta->version})",
-            [
-                'empresa_id' => $empresa->id,
-                'datos_despues' => [
-                    'reclamacion_id' => $reclamacion->id,
-                    'decision' => $decision->value,
-                    'version' => $respuesta->version,
-                ],
-            ]
-        );
 
         app(AuditoriaService::class)->registrar(
             'respuesta_formal_registrada',

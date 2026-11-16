@@ -179,6 +179,8 @@ Route::middleware(['tenant.access'])->group(function () {
         ->name('empresa.soporte.store');
     Route::patch('configuracion/soporte/{id}/autorizar', [EmpresaSoporteController::class, 'autorizar'])
         ->name('empresa.soporte.autorizar');
+    Route::patch('configuracion/soporte/{id}/rechazar', [EmpresaSoporteController::class, 'rechazar'])
+        ->name('empresa.soporte.rechazar');
     Route::patch('configuracion/soporte/{id}/finalizar', [EmpresaSoporteController::class, 'finalizar'])
         ->name('empresa.soporte.finalizar');
     Route::patch('configuracion/soporte/{id}/revocar', [EmpresaSoporteController::class, 'revocar'])
@@ -217,6 +219,8 @@ Route::middleware(['tenant.access'])->group(function () {
         ->name('empresa.expedientes.pdf');
     Route::get('expedientes/{id}/adjuntos/{adjuntoId}', [ExpedienteController::class, 'descargarAdjunto'])
         ->name('empresa.expedientes.adjunto.descargar');
+    Route::get('expedientes/{id}/respuestas/{respuestaId}/adjuntos/{indice}', [ExpedienteController::class, 'descargarAdjuntoRespuesta'])
+        ->name('empresa.expedientes.respuestas.adjunto.descargar');
     Route::patch('expedientes/{id}/asignar', [ExpedienteController::class, 'asignarResponsable'])
         ->name('empresa.expedientes.asignar');
     Route::patch('expedientes/{id}/estado', [ExpedienteController::class, 'cambiarEstado'])
@@ -253,4 +257,6 @@ Route::prefix('l/{slug}')->middleware(['tenant.slug'])->group(function () {
         ->name('libro.consulta.post');
     Route::get('consulta-segura/{token}', [ConsultaEstadoController::class, 'detalleFirmado'])
         ->name('libro.consulta.firmada');
+    Route::get('consulta-segura/{token}/respuestas/{respuestaId}/adjuntos/{indice}', [ConsultaEstadoController::class, 'descargarAdjuntoRespuesta'])
+        ->name('libro.consulta.respuesta.adjunto');
 });

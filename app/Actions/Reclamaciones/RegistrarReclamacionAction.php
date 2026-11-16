@@ -6,9 +6,11 @@ use App\Enums\EstadoReclamacion;
 use App\Jobs\EnviarConstanciaReclamacionJob;
 use App\Jobs\NotificarNuevaReclamacionEmpresaJob;
 use App\Models\Empresa;
+use App\Models\PlataformaAlerta;
 use App\Models\Reclamacion;
 use App\Models\ReclamacionAdjunto;
 use App\Models\ReclamacionEvento;
+use App\Services\AuditoriaService;
 use App\Services\CorrelativoService;
 use App\Services\PlazoReclamacionService;
 use Illuminate\Http\UploadedFile;
@@ -159,6 +161,42 @@ class RegistrarReclamacionAction
             // Despachar tareas asíncronas de envío de correo
             EnviarConstanciaReclamacionJob::dispatch($reclamacion);
             NotificarNuevaReclamacionEmpresaJob::dispatch($reclamacion);
+
+            // P1-10: Verificación y registro de exceso de cuota mensual contratada
+            $limite = $empresa->limite_reclamaciones_mes;
+            if ($limite && $limite > 0) {
+                $totalMes = $empresa->reclamacionesMesActualCount();
+                if ($totalMes > $limite) {
+                    PlataformaAlerta::firstOrCreate(
+                        [
+                            'tipo' => 'exceso_cuota_reclamaciones',
+                            'estado' => 'activa',
+                            'titulo' => "Exceso de cuota mensual: {$empresa->name}",
+                        ],
+                        [
+                            'severidad' => 'advertencia',
+                            'descripcion' => "La empresa {$empresa->name} (RUC: {$empresa->ruc}) superó su límite mensual contratado de {$limite} reclamaciones en el período actual (Total acumulado: {$totalMes}).",
+                            'valor_actual' => (string) $totalMes,
+                            'umbral_definido' => (string) $limite,
+                            'notificado_datec_en' => now(),
+                        ]
+                    );
+
+                    app(AuditoriaService::class)->registrar(
+                        'exceso_cuota_plan',
+                        'suscripciones',
+                        "Exceso de cuota mensual: {$empresa->name} superó el límite contratado de {$limite} reclamaciones en el mes.",
+                        [
+                            'empresa_id' => $empresa->id,
+                            'datos_despues' => [
+                                'limite' => $limite,
+                                'total_mes' => $totalMes,
+                                'plan' => $empresa->plan->value,
+                            ],
+                        ]
+                    );
+                }
+            }
 
             return $reclamacion;
         });

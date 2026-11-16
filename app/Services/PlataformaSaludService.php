@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Mail\AlertaOperativaDatecMailable;
 use App\Models\Empresa;
 use App\Models\PlataformaAlerta;
 use App\Models\Reclamacion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * Servicio encargado de monitorear la disponibilidad operativa, uso de recursos,
@@ -230,8 +232,19 @@ class PlataformaSaludService
                 'valor_actual' => (string) $valorActual,
                 'umbral_definido' => $umbralDefinido,
                 'estado' => 'activa',
-                'notificado_datec_en' => now(),
+                'notificado_datec_en' => null,
             ]);
+
+            // Enviar alerta formal por correo electrónico al equipo técnico y de operaciones de Datec
+            $emailDatec = config('mail.datec_alertas_email', env('DATEC_ALERTAS_EMAIL', 'soporte@datec.pe'));
+            if ($emailDatec) {
+                try {
+                    Mail::to($emailDatec)->send(new AlertaOperativaDatecMailable($nuevaAlerta));
+                    $nuevaAlerta->update(['notificado_datec_en' => now()]);
+                } catch (\Throwable $e) {
+                    Log::error("[ERROR NOTIFICACION DATEC] No se pudo enviar el correo de alerta a {$emailDatec}: {$e->getMessage()}");
+                }
+            }
 
             // Notificación registrada para Datec
             Log::warning("[ALERTA OPERATIVA DATEC] {$titulo}: {$descripcion}");

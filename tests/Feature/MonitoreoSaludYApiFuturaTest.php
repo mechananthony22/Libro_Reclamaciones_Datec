@@ -231,6 +231,7 @@ test('cuando la API se habilita permite consultar el estado del expediente media
                 'numero_hoja' => $reclamacion->numero_hoja,
                 'tipo' => 'reclamo',
                 'estado' => 'pendiente',
+                'constancia_pdf_disponible' => true,
             ],
         ]);
 });

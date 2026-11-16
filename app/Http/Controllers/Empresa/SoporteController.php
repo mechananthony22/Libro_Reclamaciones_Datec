@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Empresa;
 
 use App\Http\Controllers\Controller;
+use App\Mail\RespuestaAccesoDelegadoMailable;
 use App\Models\Empresa;
 use App\Models\SoporteAutorizacion;
 use App\Services\AuditoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -86,8 +89,7 @@ class SoporteController extends Controller
         $user = $request->user();
 
         // Generar código correlativo de ticket
-        $conteoHoy = SoporteAutorizacion::whereDate('created_at', now()->toDateString())->count() + 1;
-        $codigoTicket = 'TCK-'.now()->format('Ymd').'-'.str_pad((string) $conteoHoy, 4, '0', STR_PAD_LEFT);
+        $codigoTicket = SoporteAutorizacion::generarCodigoTicket();
 
         $ticket = SoporteAutorizacion::create([
             'empresa_id' => $empresa->id,
@@ -140,6 +142,16 @@ class SoporteController extends Controller
 
         $ticket->autorizar($request->user(), $horas);
 
+        // Notificar a Datec / solicitante sobre la autorización del acceso delegado
+        $destinatario = $ticket->solicitadoPor?->email ?: config('mail.datec_alertas_email', env('DATEC_ALERTAS_EMAIL', 'soporte@datec.pe'));
+        if ($destinatario) {
+            try {
+                Mail::to($destinatario)->send(new RespuestaAccesoDelegadoMailable($empresa, $ticket, $request->user(), 'autorizado'));
+            } catch (\Throwable $e) {
+                Log::error("[SOPORTE DATEC] Error al notificar autorización de acceso: {$e->getMessage()}");
+            }
+        }
+
         $this->auditoriaService->registrar(
             'acceso_delegado_autorizado',
             'soporte',
@@ -154,6 +166,50 @@ class SoporteController extends Controller
         );
 
         return back()->with('success', "Acceso delegado para soporte técnico concedido por {$horas} horas.");
+    }
+
+    /**
+     * Rechaza una solicitud de soporte técnico o acceso delegado en estado pendiente.
+     */
+    public function rechazar(Request $request, int $id): RedirectResponse
+    {
+        /** @var Empresa $empresa */
+        $empresa = Empresa::current();
+
+        $ticket = SoporteAutorizacion::where('empresa_id', $empresa->id)->findOrFail($id);
+
+        if ($ticket->estado !== 'pendiente') {
+            return back()->with('error', 'Solo es posible rechazar solicitudes de acceso en estado pendiente.');
+        }
+
+        $motivo = trim((string) $request->input('motivo', 'Acceso delegado rechazado por el administrador de la empresa.'));
+
+        $ticket->rechazar($request->user(), $motivo);
+
+        // Notificar a Datec soporte sobre el rechazo
+        $destinatario = $ticket->solicitadoPor?->email ?: config('mail.datec_alertas_email', env('DATEC_ALERTAS_EMAIL', 'soporte@datec.pe'));
+        if ($destinatario) {
+            try {
+                Mail::to($destinatario)->send(new RespuestaAccesoDelegadoMailable($empresa, $ticket, $request->user(), 'rechazado'));
+            } catch (\Throwable $e) {
+                Log::error("[SOPORTE DATEC] Error al notificar rechazo de acceso: {$e->getMessage()}");
+            }
+        }
+
+        $this->auditoriaService->registrar(
+            'acceso_delegado_rechazado',
+            'soporte',
+            "Solicitud de acceso delegado {$ticket->codigo_ticket} rechazada por {$request->user()?->name}. Motivo: {$motivo}",
+            [
+                'empresa_id' => $empresa->id,
+                'datos_despues' => [
+                    'codigo_ticket' => $ticket->codigo_ticket,
+                    'motivo' => $motivo,
+                ],
+            ]
+        );
+
+        return back()->with('info', "La solicitud de acceso delegado {$ticket->codigo_ticket} ha sido rechazada.");
     }
 
     /**

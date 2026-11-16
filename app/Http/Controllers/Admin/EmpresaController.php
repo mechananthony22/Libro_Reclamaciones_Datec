@@ -15,7 +15,6 @@ use App\Services\AuditoriaService;
 use App\Services\SlugReconfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -74,8 +73,10 @@ class EmpresaController extends Controller
 
     public function create(): Response
     {
+        $estadosOperativos = array_values(array_filter(EstadoEmpresa::cases(), fn ($e) => $e !== EstadoEmpresa::BajaProgramada));
+
         return Inertia::render('Admin/Empresas/Create', [
-            'estados' => array_map(fn ($e) => ['value' => $e->value, 'label' => $e->label()], EstadoEmpresa::cases()),
+            'estados' => array_map(fn ($e) => ['value' => $e->value, 'label' => $e->label()], $estadosOperativos),
             'planes' => array_map(fn ($p) => ['value' => $p->value, 'label' => $p->label()], PlanEmpresa::cases()),
         ]);
     }
@@ -124,9 +125,11 @@ class EmpresaController extends Controller
 
     public function edit(Empresa $empresa): Response
     {
+        $estadosOperativos = array_values(array_filter(EstadoEmpresa::cases(), fn ($e) => $e !== EstadoEmpresa::BajaProgramada));
+
         return Inertia::render('Admin/Empresas/Edit', [
             'empresa' => $empresa,
-            'estados' => array_map(fn ($e) => ['value' => $e->value, 'label' => $e->label()], EstadoEmpresa::cases()),
+            'estados' => array_map(fn ($e) => ['value' => $e->value, 'label' => $e->label()], $estadosOperativos),
             'planes' => array_map(fn ($p) => ['value' => $p->value, 'label' => $p->label()], PlanEmpresa::cases()),
         ]);
     }
@@ -166,6 +169,21 @@ class EmpresaController extends Controller
         $estadoAnterior = $empresa->estado->value;
         $nuevoEstado = EstadoEmpresa::from($request->validated('estado'));
 
+        // P1-09: La baja programada no puede ejecutarse como un cambio de estado simple;
+        // debe procesarse a través del flujo formal atómico de Salida de Cliente con custodia y acta.
+        if ($nuevoEstado === EstadoEmpresa::BajaProgramada) {
+            return back()->withErrors([
+                'estado' => 'Para dar de baja una empresa debe utilizar el proceso formal de Salida de Cliente con generación de paquete legal y retención.',
+            ]);
+        }
+
+        // P1-09: Bloqueo estricto de reactivación arbitraria durante custodia legal de pruebas
+        if (($empresa->isBajaProgramada() || $empresa->estaBajoRetencionLegal()) && $nuevoEstado === EstadoEmpresa::Activa) {
+            return back()->withErrors([
+                'estado' => 'No está permitido reactivar directamente una empresa en periodo de baja programada o custodia legal probatoria.',
+            ]);
+        }
+
         $activo = ($nuevoEstado === EstadoEmpresa::Activa);
 
         $empresa->update([
@@ -174,24 +192,6 @@ class EmpresaController extends Controller
             'fecha_cambio_estado' => now(),
             'activo' => $activo,
         ]);
-
-        // Si se reactiva la empresa (Pilar A), reactivar automáticamente los accesos de sus administradores
-        if ($activo) {
-            DB::table('empresa_usuario')
-                ->where('empresa_id', $empresa->id)
-                ->update([
-                    'activo' => true,
-                    'updated_at' => now(),
-                ]);
-        } elseif ($nuevoEstado === EstadoEmpresa::Suspendida || $nuevoEstado === EstadoEmpresa::BajaProgramada) {
-            // Si se suspende o da de baja, suspender accesos vinculados a esta empresa
-            DB::table('empresa_usuario')
-                ->where('empresa_id', $empresa->id)
-                ->update([
-                    'activo' => false,
-                    'updated_at' => now(),
-                ]);
-        }
 
         app(AuditoriaService::class)->registrar(
             'empresa_estado_cambiado',

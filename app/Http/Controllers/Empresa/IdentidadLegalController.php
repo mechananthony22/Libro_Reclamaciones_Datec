@@ -27,7 +27,7 @@ class IdentidadLegalController extends Controller
         if (! $empresa) {
             $user = $request->user();
             if ($user) {
-                $empresa = $user->empresas()->first();
+                $empresa = $user->empresas()->wherePivot('activo', true)->where('tenants.activo', true)->first();
                 $empresa?->makeCurrent();
             }
 
@@ -35,15 +35,10 @@ class IdentidadLegalController extends Controller
                 $empresa = Empresa::find($request->integer('empresa_id'));
                 $empresa?->makeCurrent();
             }
-
-            if (! $empresa) {
-                $empresa = Empresa::first();
-                $empresa?->makeCurrent();
-            }
         }
 
         if (! $empresa) {
-            abort(404, 'No se encontró la empresa.');
+            abort(403, 'No tienes una empresa activa asignada.');
         }
 
         return Inertia::render('Empresa/IdentidadLegal/Edit', [

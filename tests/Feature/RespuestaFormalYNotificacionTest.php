@@ -193,18 +193,38 @@ test('se puede reintentar manualmente la notificacion de la respuesta', function
 });
 
 test('registra evidencia y alerta cuando el consumidor no tiene correo valido', function () {
-    $this->reclamacion->update([
+    $reclamacionSinEmail = Reclamacion::create([
+        'empresa_id' => $this->empresa->id,
+        'numero_hoja' => '00000099-2026',
+        'fecha_hora' => now()->subDays(2),
+        'tipo' => TipoReclamacion::Reclamo,
+        'tipo_bien' => TipoBien::Producto,
+        'descripcion_bien' => 'Servicio de Internet',
+        'monto_reclamado' => 150.00,
+        'moneda' => 'PEN',
+        'detalle_problema' => 'Corte intempestivo del servicio.',
+        'pedido_consumidor' => 'Restitución del servicio y descuento de días sin conexión.',
         'datos_consumidor' => [
             'tipo_documento' => 'dni',
             'numero_documento' => '45678912',
             'nombres' => 'Mario',
             'apellidos' => 'Vargas',
+            'telefono' => '987123456',
+            'direccion' => 'Av. Los Álamos 450',
+            'es_menor_edad' => false,
         ],
+        'datos_legales_snapshot' => [
+            'razon_social' => 'EMPRESA RETAIL S.A.C.',
+            'ruc' => '20123456789',
+            'direccion' => 'Av. Javier Prado 100, Lima',
+        ],
+        'estado' => EstadoReclamacion::Pendiente,
+        'token_consulta' => Str::random(40),
     ]);
 
     $respuesta = ReclamacionRespuesta::create([
         'empresa_id' => $this->empresa->id,
-        'reclamacion_id' => $this->reclamacion->id,
+        'reclamacion_id' => $reclamacionSinEmail->id,
         'user_id' => $this->usuario->id,
         'autor_nombre' => 'Especialista Legal',
         'decision' => DecisionRespuesta::Procedente,
@@ -214,9 +234,9 @@ test('registra evidencia y alerta cuando el consumidor no tiene correo valido', 
         'notificado' => false,
     ]);
 
-    (new EnviarRespuestaReclamacionJob($this->reclamacion, $respuesta))->handle();
+    (new EnviarRespuestaReclamacionJob($reclamacionSinEmail, $respuesta))->handle();
 
-    $envio = ReclamacionEnvio::where('reclamacion_id', $this->reclamacion->id)
+    $envio = ReclamacionEnvio::where('reclamacion_id', $reclamacionSinEmail->id)
         ->where('tipo', 'respuesta_formal')
         ->first();
 
@@ -225,7 +245,7 @@ test('registra evidencia y alerta cuando el consumidor no tiene correo valido', 
         ->and($envio->error_mensaje)->toContain('para recibir la respuesta formal');
 
     $this->assertDatabaseHas('reclamacion_eventos', [
-        'reclamacion_id' => $this->reclamacion->id,
+        'reclamacion_id' => $reclamacionSinEmail->id,
         'accion' => 'notificacion_respuesta_sin_destinatario',
     ]);
 });

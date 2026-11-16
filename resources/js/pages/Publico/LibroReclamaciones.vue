@@ -258,6 +258,35 @@ const enviarRegistro = () => {
         });
     }
 };
+
+// Retorno a la tienda/página de origen o cierre de pestaña
+const regresarPaginaOrigen = () => {
+    if (typeof window === 'undefined') return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnUrl = urlParams.get('return_url') || urlParams.get('ref') || urlParams.get('origen');
+
+    if (returnUrl) {
+        window.location.href = returnUrl;
+        return;
+    }
+
+    if (document.referrer && !document.referrer.includes(window.location.host)) {
+        window.location.href = document.referrer;
+        return;
+    }
+
+    if (window.history.length > 1) {
+        window.history.back();
+        return;
+    }
+
+    try {
+        window.close();
+    } catch {
+        // Fallback si el navegador bloquea el cierre por script
+    }
+};
 </script>
 
 <template>
@@ -319,7 +348,7 @@ const enviarRegistro = () => {
         </header>
 
         <!-- Mensaje de confirmación de registro exitoso -->
-        <div v-if="flashSuccess" class="mx-auto max-w-5xl px-4 pt-6 sm:px-6 w-full">
+        <div v-if="flashSuccess" class="mx-auto max-w-6xl px-4 pt-6 sm:px-6 w-full">
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/80 p-4 shadow-2xs flex items-start gap-3 text-emerald-900">
                 <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -334,8 +363,41 @@ const enviarRegistro = () => {
         </div>
 
         <!-- Contenido Principal -->
-        <main class="mx-auto max-w-5xl px-4 py-8 sm:px-6 grow w-full">
-            <div class="space-y-6">
+        <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 grow w-full">
+            <div class="lg:grid lg:grid-cols-[200px_1fr] lg:gap-8 items-start">
+
+                <!-- Acciones Laterales (Al costado en la pantalla normal, uno debajo de otro) -->
+                <aside class="mb-6 lg:mb-0 lg:sticky lg:top-20 z-20 w-full lg:w-48 xl:w-52 shrink-0">
+                    <div class="flex flex-col gap-2.5">
+                        <!-- Botón 1: Volver a la tienda -->
+                        <button
+                            type="button"
+                            @click="regresarPaginaOrigen"
+                            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 transition cursor-pointer group w-full"
+                            title="Regresar a la página o tienda de origen"
+                        >
+                            <svg class="h-4 w-4 text-slate-400 group-hover:text-slate-600 group-hover:-translate-x-0.5 transition shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            <span class="truncate">Volver a la tienda</span>
+                        </button>
+
+                        <!-- Botón 2: Conocer sobre DatecLR -->
+                        <Link
+                            href="/"
+                            class="inline-flex items-center gap-2 rounded-xl border border-blue-200/80 bg-blue-50/70 px-3.5 py-2.5 text-xs font-bold text-blue-700 shadow-2xs hover:bg-blue-100 hover:text-blue-900 hover:border-blue-300 transition group w-full"
+                            title="Conocer más sobre Datec Libro de Reclamaciones"
+                        >
+                            <svg class="h-4 w-4 text-blue-500 group-hover:text-blue-700 group-hover:-translate-x-0.5 transition shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            <span class="truncate">Conocer sobre DatecLR</span>
+                        </Link>
+                    </div>
+                </aside>
+
+                <!-- Columna Central de Contenido y Formulario -->
+                <div class="space-y-6 w-full min-w-0">
 
                 <!-- Vista Inicial: Bienvenida, Base Legal y Datos del Proveedor -->
                 <div v-if="!mostrarFormulario" class="space-y-6">
@@ -1242,6 +1304,7 @@ const enviarRegistro = () => {
                     </div>
                 </div>
 
+                </div>
             </div>
         </main>
 

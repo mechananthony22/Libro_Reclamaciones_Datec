@@ -86,6 +86,35 @@ class Reclamacion extends Model
             }
         });
 
+        static::updating(function (Reclamacion $reclamacion) {
+            $inmutables = [
+                'empresa_id',
+                'numero_hoja',
+                'fecha_hora',
+                'tipo',
+                'tipo_bien',
+                'monto_reclamado',
+                'moneda',
+                'descripcion_bien',
+                'numero_comprobante',
+                'fecha_contratacion',
+                'detalle_problema',
+                'pedido_consumidor',
+                'datos_consumidor',
+                'datos_legales_snapshot',
+                'token_consulta',
+                'aviso_privacidad_version',
+                'aviso_privacidad_aceptado_en',
+                'aviso_privacidad_ip',
+            ];
+
+            foreach ($inmutables as $campo) {
+                if ($reclamacion->isDirty($campo)) {
+                    throw new \DomainException("El campo '{$campo}' del expediente es inmutable por ley y no puede ser modificado.");
+                }
+            }
+        });
+
         static::deleting(function (Reclamacion $reclamacion) {
             throw new \DomainException('La eliminación de reclamaciones está estrictamente prohibida por normativa legal (D.S. N° 011-2011-PCM / Ley N° 29571). Los expedientes deben conservarse de forma íntegra e inmutable.');
         });

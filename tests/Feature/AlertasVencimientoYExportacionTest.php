@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\VerificarVencimientosReclamacionesCommand;
+use App\Enums\DecisionRespuesta;
 use App\Enums\EstadoEmpresa;
 use App\Enums\EstadoReclamacion;
 use App\Enums\PlanEmpresa;
@@ -10,6 +11,7 @@ use App\Enums\TipoReclamacion;
 use App\Mail\AlertaVencimientoMailable;
 use App\Models\Empresa;
 use App\Models\Reclamacion;
+use App\Models\ReclamacionRespuesta;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
@@ -406,4 +408,109 @@ test('administrador puede exportar a pdf cuando existen reclamaciones sin fecha 
 
     $response->assertOk();
     expect($response->headers->get('Content-Type'))->toContain('application/pdf');
+});
+
+test('exportacion csv contiene direccion real, detalle, pedido y respuesta formal sin columnas vacias', function () {
+    $rec = Reclamacion::create([
+        'empresa_id' => $this->empresaA->id,
+        'datos_legales_snapshot' => [
+            'razon_social' => 'COMERCIAL ANDINA S.A.C.',
+            'ruc' => '20556677889',
+        ],
+        'numero_hoja' => '00000077-2026',
+        'fecha_hora' => now()->subDays(2),
+        'tipo' => TipoReclamacion::Reclamo,
+        'tipo_bien' => TipoBien::Producto,
+        'descripcion_bien' => 'Laptop Gamer 16GB',
+        'estado' => EstadoReclamacion::Atendida,
+        'vence_en' => Carbon::now('America/Lima')->addDays(10),
+        'detalle_problema' => 'La pantalla parpadea al encender la laptop.',
+        'pedido_consumidor' => 'Cambio inmediato por producto nuevo.',
+        'datos_consumidor' => [
+            'nombres' => 'Fernando',
+            'apellidos' => 'Alonso',
+            'tipo_documento' => 'DNI',
+            'numero_documento' => '70112233',
+            'direccion' => 'Av. Javier Prado Este 4560, Surco',
+            'email' => 'fernando.alonso@gmail.com',
+            'telefono' => '991223344',
+        ],
+    ]);
+
+    ReclamacionRespuesta::create([
+        'empresa_id' => $this->empresaA->id,
+        'reclamacion_id' => $rec->id,
+        'user_id' => $this->adminA->id,
+        'autor_nombre' => $this->adminA->name,
+        'autor_cargo' => 'Jefe de Atención al Cliente',
+        'decision' => DecisionRespuesta::Procedente,
+        'propuesta_solucion' => 'Se procede con el cambio del equipo defectuoso en tienda.',
+        'fecha_respuesta' => now(),
+    ]);
+
+    $this->empresaA->makeCurrent();
+
+    $response = $this->actingAs($this->adminA)
+        ->get(route('empresa.expedientes.exportar', ['formato' => 'csv']));
+
+    $response->assertOk();
+    $csv = $response->streamedContent();
+
+    expect($csv)->toContain('Av. Javier Prado Este 4560, Surco');
+    expect($csv)->toContain('La pantalla parpadea al encender la laptop.');
+    expect($csv)->toContain('Cambio inmediato por producto nuevo.');
+    expect($csv)->toContain('Se procede con el cambio del equipo defectuoso en tienda.');
+    expect($csv)->toContain('Respuesta Formal');
+    expect($csv)->toContain('Fecha de Respuesta');
+});
+
+test('exportacion csv utiliza cursor y registra auditoria en lotes sin cargar todo en memoria', function () {
+    // Crear múltiples reclamaciones para verificar procesamiento en streaming
+    $reclamacionesIds = [];
+    for ($i = 1; $i <= 5; $i++) {
+        $rec = Reclamacion::create([
+            'empresa_id' => $this->empresaA->id,
+            'datos_legales_snapshot' => [
+                'razon_social' => 'COMERCIAL ANDINA S.A.C.',
+                'ruc' => '20556677889',
+            ],
+            'numero_hoja' => "0000050{$i}-2026",
+            'fecha_hora' => now()->subDays($i),
+            'tipo' => TipoReclamacion::Reclamo,
+            'tipo_bien' => TipoBien::Producto,
+            'descripcion_bien' => "Item lote {$i}",
+            'estado' => EstadoReclamacion::Pendiente,
+            'detalle_problema' => "Detalle problema lote {$i}",
+            'pedido_consumidor' => "Solución requerida lote {$i}",
+            'datos_consumidor' => [
+                'nombres' => "Cliente{$i}",
+                'apellidos' => 'Prueba',
+                'tipo_documento' => 'DNI',
+                'numero_documento' => "7000000{$i}",
+                'direccion' => "Calle Lote {$i}",
+                'email' => "cliente{$i}@test.com",
+                'telefono' => '999888777',
+            ],
+        ]);
+        $reclamacionesIds[] = $rec->id;
+    }
+
+    $this->empresaA->makeCurrent();
+
+    $response = $this->actingAs($this->adminA)
+        ->get(route('empresa.expedientes.exportar', ['formato' => 'csv']));
+
+    $response->assertOk();
+    $csv = $response->streamedContent();
+
+    foreach ($reclamacionesIds as $id) {
+        $this->assertDatabaseHas('reclamacion_eventos', [
+            'empresa_id' => $this->empresaA->id,
+            'reclamacion_id' => $id,
+            'accion' => 'expediente_exportado',
+        ]);
+    }
+
+    expect($csv)->toContain('00000501-2026');
+    expect($csv)->toContain('00000505-2026');
 });

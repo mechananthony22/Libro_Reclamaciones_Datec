@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SolicitudAccesoDelegadoMailable;
 use App\Models\Empresa;
 use App\Models\SoporteAutorizacion;
 use App\Services\AuditoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -86,8 +89,7 @@ class SoporteController extends Controller
         $empresa = Empresa::findOrFail($datos['empresa_id']);
         $user = $request->user();
 
-        $conteoHoy = SoporteAutorizacion::whereDate('created_at', now()->toDateString())->count() + 1;
-        $codigoTicket = 'TCK-'.now()->format('Ymd').'-'.str_pad((string) $conteoHoy, 4, '0', STR_PAD_LEFT);
+        $codigoTicket = SoporteAutorizacion::generarCodigoTicket();
 
         $ticket = SoporteAutorizacion::create([
             'empresa_id' => $empresa->id,
@@ -98,6 +100,23 @@ class SoporteController extends Controller
             'estado' => 'pendiente',
             'horas_vigencia' => (int) ($datos['horas_vigencia'] ?? 24),
         ]);
+
+        // Notificar por correo a los administradores de la empresa sobre la solicitud de acceso delegado
+        $destinatarios = $empresa->destinatariosNotificaciones();
+        if (! empty($destinatarios)) {
+            try {
+                $destinatarioPrincipal = $destinatarios[0];
+                $destinatariosBcc = array_slice($destinatarios, 1);
+
+                $mailer = Mail::to($destinatarioPrincipal);
+                if (! empty($destinatariosBcc)) {
+                    $mailer->bcc($destinatariosBcc);
+                }
+                $mailer->send(new SolicitudAccesoDelegadoMailable($empresa, $ticket, $user));
+            } catch (\Throwable $e) {
+                Log::error("[SOPORTE DATEC] Error al notificar solicitud de acceso a empresa {$empresa->id}: {$e->getMessage()}");
+            }
+        }
 
         $this->auditoriaService->registrar(
             'solicitud_acceso_delegado_creada',

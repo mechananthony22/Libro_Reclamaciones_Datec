@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 
@@ -93,6 +93,17 @@ function autorizarTicket(ticketId: number, horas: number = 24) {
     });
 }
 
+function rechazarTicket(ticketId: number) {
+    if (!confirm('¿Estás seguro de que deseas rechazar esta solicitud de acceso de soporte técnico?')) {
+        return;
+    }
+    router.patch(`/configuracion/soporte/${ticketId}/rechazar`, {
+        motivo: 'Solicitud rechazada por el administrador de la empresa.',
+    }, {
+        preserveScroll: true,
+    });
+}
+
 function abrirModalRevocar(ticket: TicketItem) {
     ticketSeleccionadoParaRevocar.value = ticket;
     formRevocar.motivo_revocacion = '';
@@ -127,6 +138,11 @@ function estadoBadge(ticket: TicketItem) {
             return {
                 clase: 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 font-semibold',
                 texto: 'Revocado',
+            };
+        case 'rechazado':
+            return {
+                clase: 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 font-semibold',
+                texto: 'Rechazado',
             };
         case 'finalizado':
             return {
@@ -348,6 +364,14 @@ const claseCampo = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2
                                                 class="rounded-xl border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-200 transition"
                                             >
                                                 48h
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click="rechazarTicket(ticket.id)"
+                                                class="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-100 transition shadow-2xs cursor-pointer"
+                                                title="Rechazar solicitud"
+                                            >
+                                                Rechazar
                                             </button>
                                         </div>
                                         <span v-else class="text-slate-400 text-xs px-2 font-medium">Concluido</span>

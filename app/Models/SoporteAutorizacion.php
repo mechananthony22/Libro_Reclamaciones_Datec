@@ -130,6 +130,42 @@ class SoporteAutorizacion extends Model
     }
 
     /**
+     * Genera un código correlativo único y seguro por fecha (formato: TCK-YYYYMMDD-0001).
+     * Evita colisiones por condición de carrera inspeccionando el último registro numérico del día.
+     */
+    public static function generarCodigoTicket(): string
+    {
+        $prefijo = 'TCK-'.now()->format('Ymd').'-';
+
+        $ultimo = static::where('codigo_ticket', 'like', "{$prefijo}%")
+            ->orderByDesc('id')
+            ->value('codigo_ticket');
+
+        $siguiente = 1;
+        if ($ultimo) {
+            $partes = explode('-', (string) $ultimo);
+            $correlativoStr = end($partes);
+            $siguiente = ((int) $correlativoStr) + 1;
+        }
+
+        return $prefijo.str_pad((string) $siguiente, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Expira automáticamente todas las autorizaciones vigentes cuya fecha límite ya venció.
+     * Transiciona el estado de 'autorizado' a 'expirado'.
+     */
+    public static function expirarVencidos(): int
+    {
+        return static::where('estado', 'autorizado')
+            ->whereNotNull('valido_hasta')
+            ->where('valido_hasta', '<=', now())
+            ->update([
+                'estado' => 'expirado',
+            ]);
+    }
+
+    /**
      * Revoca anticipadamente el acceso delegado.
      */
     public function revocar(string $motivo = 'Revocado por el administrador de la empresa'): void
@@ -139,6 +175,18 @@ class SoporteAutorizacion extends Model
             'revocado_en' => now(),
             'motivo_revocacion' => $motivo,
             'valido_hasta' => now(), // Cierra el acceso delegado de inmediato
+        ]);
+    }
+
+    /**
+     * Rechaza una solicitud de soporte o acceso delegado en estado pendiente.
+     */
+    public function rechazar(User $rechazador, string $motivo = 'Solicitud de soporte rechazada por la empresa'): void
+    {
+        $this->update([
+            'estado' => 'rechazado',
+            'motivo_revocacion' => $motivo,
+            'valido_hasta' => now(),
         ]);
     }
 }

@@ -194,4 +194,10 @@ test('un usuario sin empresas asignadas recibe 403 y mantiene su sesion autentic
 
     $response->assertForbidden();
     $this->assertAuthenticatedAs($usuarioHuerfano);
+
+    // Asegurar que no se aplica fallback a Empresa::first() en rutas de configuración
+    $this->actingAs($usuarioHuerfano)->get('/configuracion/usuarios')->assertForbidden();
+    $this->actingAs($usuarioHuerfano)->get('/configuracion/establecimientos')->assertForbidden();
+    $this->actingAs($usuarioHuerfano)->get('/configuracion/personalizacion')->assertForbidden();
+    $this->actingAs($usuarioHuerfano)->get('/configuracion/empresa')->assertForbidden();
 });

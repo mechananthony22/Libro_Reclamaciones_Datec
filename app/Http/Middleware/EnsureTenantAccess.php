@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\EstadoEmpresa;
 use App\Models\Empresa;
 use Closure;
 use Illuminate\Http\Request;
@@ -42,10 +43,11 @@ class EnsureTenantAccess
                 $tenantId = $empresaPivote->id;
                 session(['current_tenant_id' => $tenantId]);
             } elseif ($user->isSuperAdmin()) {
-                // Si es superadmin sin empresa en sesión, seleccionar la primera empresa disponible
-                $primeraEmpresa = Empresa::where('activo', true)->first() ?: Empresa::first();
-                if ($primeraEmpresa) {
-                    $tenantId = $primeraEmpresa->id;
+                $empresaActiva = Empresa::where('activo', true)
+                    ->where('estado', EstadoEmpresa::Activa)
+                    ->first();
+                if ($empresaActiva) {
+                    $tenantId = $empresaActiva->id;
                     session(['current_tenant_id' => $tenantId]);
                 }
             }
@@ -79,6 +81,14 @@ class EnsureTenantAccess
         }
 
         if (! $empresaAutorizada->isActiva()) {
+            if ($empresaAutorizada->isSuscripcionCancelada()) {
+                abort(403, 'La suscripción de tu empresa ha sido cancelada.');
+            }
+
+            if ($empresaAutorizada->isSuscripcionVencida()) {
+                abort(403, 'El periodo de vigencia de la suscripción de tu empresa ha expirado.');
+            }
+
             abort(403, 'El servicio de tu empresa se encuentra temporalmente suspendido o inactivo.');
         }
 

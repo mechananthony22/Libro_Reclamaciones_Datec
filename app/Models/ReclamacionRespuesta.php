@@ -19,6 +19,16 @@ class ReclamacionRespuesta extends Model
 
     protected $table = 'reclamacion_respuestas';
 
+    /**
+     * Reglas del modelo para salvaguardar la evidencia de respuesta formal.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function () {
+            throw new \DomainException('Las respuestas formales a reclamaciones no pueden ser eliminadas.');
+        });
+    }
+
     protected $fillable = [
         'empresa_id',
         'reclamacion_id',

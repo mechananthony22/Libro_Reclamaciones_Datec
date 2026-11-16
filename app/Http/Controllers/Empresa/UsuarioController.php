@@ -29,17 +29,12 @@ class UsuarioController extends Controller
 
         if (! $empresa) {
             $user = $request->user();
-            $empresa = $user?->empresas()->first();
+            $empresa = $user?->empresas()->wherePivot('activo', true)->where('tenants.activo', true)->first();
             $empresa?->makeCurrent();
-
-            if (! $empresa) {
-                $empresa = Empresa::first();
-                $empresa?->makeCurrent();
-            }
         }
 
         if (! $empresa) {
-            abort(404, 'Empresa no encontrada.');
+            abort(403, 'No tienes una empresa activa asignada.');
         }
 
         // Obtener los usuarios asociados exclusivamente a esta empresa (RF-007, RF-011)
