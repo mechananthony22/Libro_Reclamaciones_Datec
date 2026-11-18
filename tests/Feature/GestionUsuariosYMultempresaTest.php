@@ -25,7 +25,7 @@ test('el administrador empresarial puede invitar un usuario a su empresa', funct
         ->withSession(['empresa_actual_id' => $empresa->id])
         ->post(route('empresa.usuarios.invitar'), [
             'email' => 'operador@alfa.com',
-            'rol' => RolEmpresa::AdminEmpresa->value,
+            'rol' => RolEmpresa::GestorReclamaciones->value,
         ])
         ->assertRedirect()
         ->assertSessionHas('success');
@@ -33,7 +33,7 @@ test('el administrador empresarial puede invitar un usuario a su empresa', funct
     $this->assertDatabaseHas('invitaciones_empresa', [
         'empresa_id' => $empresa->id,
         'email' => 'operador@alfa.com',
-        'rol' => RolEmpresa::AdminEmpresa->value,
+        'rol' => RolEmpresa::GestorReclamaciones->value,
     ]);
 });
 
@@ -217,8 +217,9 @@ test('aceptar invitacion de admin_empresa reemplaza al administrador anterior y 
 
     // Debe existir el nuevo usuario como único admin
     $this->assertDatabaseHas('users', ['email' => 'admin.nuevo@ejemplo.com']);
-    // El admin antiguo ya no debe existir si era su única empresa
-    $this->assertDatabaseMissing('users', ['email' => 'admin.antiguo@ejemplo.com']);
+    // El admin antiguo se desvincula de la empresa pero se preserva su cuenta en users para salvaguardar trazabilidad
+    $this->assertDatabaseHas('users', ['email' => 'admin.antiguo@ejemplo.com']);
+    expect($empresa->usuarios()->where('users.id', $adminAntiguo->id)->exists())->toBeFalse();
 
     // La empresa solo debe tener 1 administrador
     expect($empresa->usuarios()->wherePivot('rol', RolEmpresa::AdminEmpresa->value)->count())->toBe(1);

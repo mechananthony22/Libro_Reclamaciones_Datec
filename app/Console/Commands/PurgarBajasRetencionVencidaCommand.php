@@ -8,6 +8,7 @@ use App\Services\AuditoriaService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Comando programado para la depuración y purga definitiva de empresas dadas de baja
@@ -60,7 +61,8 @@ class PurgarBajasRetencionVencidaCommand extends Command
         $purgadas = 0;
 
         foreach ($empresasVencidas as $empresa) {
-            $directorioCustodia = storage_path("app/custodia/{$empresa->id}");
+            $disco = Storage::disk('local');
+            $directorioCustodia = "custodia/{$empresa->id}";
 
             if ($esDryRun) {
                 $this->line("[DRY-RUN] Se purgaría custodia de: {$empresa->name} (RUC: {$empresa->ruc}) - Venció: {$empresa->retencion_hasta?->format('Y-m-d')}");
@@ -69,17 +71,23 @@ class PurgarBajasRetencionVencidaCommand extends Command
                 continue;
             }
 
-            // Eliminar archivos físicos de custodia si existen
-            if (is_dir($directorioCustodia)) {
-                $archivos = glob("{$directorioCustodia}/*");
-                if ($archivos) {
-                    foreach ($archivos as $archivo) {
+            // Eliminar archivos físicos de custodia si existen mediante Storage de Laravel
+            if ($disco->exists($directorioCustodia)) {
+                $disco->deleteDirectory($directorioCustodia);
+            }
+
+            // Compatibilidad para limpiar remanentes antiguos fuera de Storage si existieran
+            $directorioLegado = storage_path("app/custodia/{$empresa->id}");
+            if (is_dir($directorioLegado)) {
+                $archivosLegados = glob("{$directorioLegado}/*");
+                if ($archivosLegados) {
+                    foreach ($archivosLegados as $archivo) {
                         if (is_file($archivo)) {
                             @unlink($archivo);
                         }
                     }
                 }
-                @rmdir($directorioCustodia);
+                @rmdir($directorioLegado);
             }
 
             // Registrar en la bitácora inmutable de auditoría

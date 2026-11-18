@@ -39,8 +39,8 @@ return new class extends Migration
             $table->text('detalle_problema')->nullable();
             $table->text('pedido_consumidor')->nullable();
 
-            // Estructuras JSON para datos del consumidor y snapshot legal del proveedor al registrar
-            $table->jsonb('datos_consumidor');
+            // Estructuras JSON para datos del consumidor (cifrado en reposo AES-256) y snapshot legal del proveedor
+            $table->text('datos_consumidor');
             $table->jsonb('datos_legales_snapshot');
 
             // Estado del expediente, fecha límite de atención (15 días hábiles) y token de consulta

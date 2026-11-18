@@ -6,6 +6,8 @@ use App\Enums\PlanEmpresa;
 use App\Enums\TipoBien;
 use App\Enums\TipoDocumentoConsumidor;
 use App\Enums\TipoReclamacion;
+use App\Jobs\EnviarConstanciaReclamacionJob;
+use App\Jobs\NotificarNuevaReclamacionEmpresaJob;
 use App\Models\Empresa;
 use App\Models\Establecimiento;
 use App\Models\Reclamacion;
@@ -41,6 +43,7 @@ test('valida los datos minimos del consumidor y el formato del documento', funct
         'razon_social' => 'Comercio Validador S.A.C.',
         'ruc' => '20987654321',
         'direccion' => 'Av. Pardo 123, Miraflores',
+        'email' => 'reclamos@comerciovalidador.pe',
         'estado' => EstadoEmpresa::Activa,
         'plan' => PlanEmpresa::Basico,
         'activo' => true,
@@ -74,6 +77,7 @@ test('exige datos del representante legal cuando el consumidor es menor de edad'
         'razon_social' => 'Jugueteria Central S.A.C.',
         'ruc' => '20456123789',
         'direccion' => 'Jr. de la Union 789, Lima',
+        'email' => 'reclamos@jugueteriacentral.pe',
         'estado' => EstadoEmpresa::Activa,
         'plan' => PlanEmpresa::Basico,
         'activo' => true,
@@ -110,6 +114,7 @@ test('distingue reclamo y queja y exige hechos, pedido y aceptacion del aviso de
         'razon_social' => 'Retail Norte S.A.C.',
         'ruc' => '20556677889',
         'direccion' => 'Av. Larco 800, Trujillo',
+        'email' => 'reclamos@retailnorte.pe',
         'estado' => EstadoEmpresa::Activa,
         'plan' => PlanEmpresa::Basico,
         'activo' => true,
@@ -234,6 +239,7 @@ test('rechaza envíos automatizados si el campo honeypot trampa es completado po
         'razon_social' => 'Seguridad y Comercio S.A.C.',
         'ruc' => '20192837465',
         'direccion' => 'Av. Primavera 1020, Surco',
+        'email' => 'reclamos@comercioseguridad.pe',
         'estado' => EstadoEmpresa::Activa,
         'plan' => PlanEmpresa::Basico,
         'activo' => true,
@@ -272,6 +278,7 @@ test('rechaza envíos que se procesen a una velocidad instantánea no humana', f
         'razon_social' => 'Anti Spam Digital S.A.C.',
         'ruc' => '20918273645',
         'direccion' => 'Av. Canaval y Moreyra 450, San Isidro',
+        'email' => 'reclamos@antispam.pe',
         'estado' => EstadoEmpresa::Activa,
         'plan' => PlanEmpresa::Basico,
         'activo' => true,
@@ -308,6 +315,7 @@ test('sanitiza el contenido contra etiquetas HTML o inyecciones de código malic
         'razon_social' => 'Sanitizador S.A.C.',
         'ruc' => '20601020304',
         'direccion' => 'Av. El Sol 450, Cusco',
+        'email' => 'reclamos@comerciosanitizado.pe',
         'estado' => EstadoEmpresa::Activa,
         'plan' => PlanEmpresa::Basico,
         'activo' => true,
@@ -358,6 +366,7 @@ test('genera correlativos atómicos consecutivos sin duplicidad para la misma em
         'razon_social' => 'Correlativos S.A.C.',
         'ruc' => '20778899001',
         'direccion' => 'Av. República 500, San Isidro',
+        'email' => 'reclamos@correlativos.pe',
         'estado' => EstadoEmpresa::Activa,
         'plan' => PlanEmpresa::Basico,
         'activo' => true,
@@ -444,6 +453,7 @@ test('aplica limitacion de tasa rate limiting para bloquear intentos masivos con
         'razon_social' => 'Rate Limit S.A.C.',
         'ruc' => '20112233445',
         'direccion' => 'Av. Arequipa 1200, Lince',
+        'email' => 'reclamos@ratelimit.pe',
         'estado' => EstadoEmpresa::Activa,
         'plan' => PlanEmpresa::Basico,
         'activo' => true,
@@ -486,6 +496,7 @@ test('calcula y persiste vence_en exactamente a 15 dias habiles segun la Ley N 2
         'razon_social' => 'Plazo Legal S.A.C.',
         'ruc' => '20192837465',
         'direccion' => 'Av. Javier Prado 500, San Isidro',
+        'email' => 'reclamos@plazolegal.pe',
         'estado' => EstadoEmpresa::Activa,
         'plan' => PlanEmpresa::Basico,
         'activo' => true,
@@ -544,4 +555,41 @@ test('calcula y persiste vence_en exactamente a 15 dias habiles segun la Ley N 2
 
     expect($reclamacionDirecta->vence_en)->not->toBeNull();
     expect($reclamacionDirecta->vence_en->toDateString())->toBe($fechaEsperada->toDateString());
+});
+
+test('los jobs de notificacion de reclamacion tienen afterCommit activo para prevenir condiciones de carrera', function () {
+    $empresa = Empresa::create([
+        'name' => 'Empresa Queue AfterCommit',
+        'slug' => 'empresa-queue-aftercommit',
+        'razon_social' => 'Empresa Queue AfterCommit S.A.C.',
+        'ruc' => '20776655443',
+        'direccion' => 'Av. Central 999',
+        'email' => 'queue@empresa.pe',
+        'estado' => EstadoEmpresa::Activa,
+        'plan' => PlanEmpresa::Basico,
+        'activo' => true,
+    ]);
+
+    $reclamacion = Reclamacion::create([
+        'empresa_id' => $empresa->id,
+        'numero_hoja' => 'QUEUE-0001',
+        'tipo' => TipoReclamacion::Reclamo,
+        'tipo_bien' => TipoBien::Producto,
+        'descripcion_bien' => 'Producto queue test',
+        'detalle_problema' => 'Detalle queue test',
+        'pedido_consumidor' => 'Pedido queue test',
+        'aviso_privacidad_leido' => true,
+        'aviso_privacidad_version' => '1.0',
+        'aviso_privacidad_aceptado_en' => now(),
+        'datos_consumidor' => ['nombres' => 'Queue', 'apellidos' => 'Tester', 'email' => 'tester@queue.pe'],
+        'datos_legales_snapshot' => ['razon_social' => 'Empresa Queue AfterCommit S.A.C.', 'ruc' => '20776655443'],
+        'estado' => EstadoReclamacion::Pendiente,
+        'fecha_hora' => now(),
+    ]);
+
+    $jobConstancia = new EnviarConstanciaReclamacionJob($reclamacion);
+    $jobEmpresa = new NotificarNuevaReclamacionEmpresaJob($reclamacion);
+
+    expect($jobConstancia->afterCommit)->toBeTrue();
+    expect($jobEmpresa->afterCommit)->toBeTrue();
 });

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureAdminEmpresa;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureTenantAccess;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant.slug' => ResolveTenantBySlug::class,
             'tenant.access' => EnsureTenantAccess::class,
+            'admin.empresa' => EnsureAdminEmpresa::class,
             'superadmin' => EnsureSuperAdmin::class,
         ]);
     })

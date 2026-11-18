@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Modelo representativo de una autorización de soporte técnico con acceso delegado temporal.
@@ -131,24 +132,31 @@ class SoporteAutorizacion extends Model
 
     /**
      * Genera un código correlativo único y seguro por fecha (formato: TCK-YYYYMMDD-0001).
-     * Evita colisiones por condición de carrera inspeccionando el último registro numérico del día.
+     * Evita colisiones por condición de carrera inspeccionando el último registro numérico del día
+     * bajo contexto transaccional con bloqueo pesimista y ordenamiento por código correlativo.
      */
     public static function generarCodigoTicket(): string
     {
         $prefijo = 'TCK-'.now()->format('Ymd').'-';
 
-        $ultimo = static::where('codigo_ticket', 'like', "{$prefijo}%")
-            ->orderByDesc('id')
-            ->value('codigo_ticket');
+        $calcular = function () use ($prefijo) {
+            $ultimo = static::query()
+                ->where('codigo_ticket', 'like', "{$prefijo}%")
+                ->lockForUpdate()
+                ->orderByDesc('codigo_ticket')
+                ->value('codigo_ticket');
 
-        $siguiente = 1;
-        if ($ultimo) {
-            $partes = explode('-', (string) $ultimo);
-            $correlativoStr = end($partes);
-            $siguiente = ((int) $correlativoStr) + 1;
-        }
+            $siguiente = 1;
+            if ($ultimo) {
+                $partes = explode('-', (string) $ultimo);
+                $correlativoStr = end($partes);
+                $siguiente = ((int) $correlativoStr) + 1;
+            }
 
-        return $prefijo.str_pad((string) $siguiente, 4, '0', STR_PAD_LEFT);
+            return $prefijo.str_pad((string) $siguiente, 4, '0', STR_PAD_LEFT);
+        };
+
+        return DB::transactionLevel() > 0 ? $calcular() : DB::transaction($calcular);
     }
 
     /**

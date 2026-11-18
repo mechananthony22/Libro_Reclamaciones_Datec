@@ -13,7 +13,25 @@ class StoreUsuarioInvitacionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        $empresa = Empresa::current();
+        if (! $empresa) {
+            return false;
+        }
+
+        return $user->empresas()
+            ->where('tenants.id', $empresa->id)
+            ->wherePivot('rol', RolEmpresa::AdminEmpresa->value)
+            ->wherePivot('activo', true)
+            ->exists();
     }
 
     /**
@@ -54,7 +72,25 @@ class StoreUsuarioInvitacionRequest extends FormRequest
                 },
             ],
             'nombre' => ['nullable', 'string', 'max:255'],
-            'rol' => ['required', Rule::enum(RolEmpresa::class)],
+            'rol' => [
+                'required',
+                Rule::enum(RolEmpresa::class),
+                function ($attribute, $value, $fail) {
+                    if ($value === RolEmpresa::AdminEmpresa->value) {
+                        $empresa = Empresa::current();
+                        if ($empresa) {
+                            $tieneAdminActivo = $empresa->usuarios()
+                                ->wherePivot('rol', RolEmpresa::AdminEmpresa->value)
+                                ->wherePivot('activo', true)
+                                ->exists();
+
+                            if ($tieneAdminActivo) {
+                                $fail('La empresa ya cuenta con un Administrador Titular activo. Para salvaguardar la titularidad legal, no es posible invitar a un segundo administrador que desplace al titular.');
+                            }
+                        }
+                    }
+                },
+            ],
         ];
     }
 

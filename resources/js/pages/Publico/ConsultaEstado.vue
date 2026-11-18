@@ -61,7 +61,18 @@ function consultar() {
 </script>
 
 <template>
-    <Head :title="`Consultar Estado de Reclamación | ${empresa.name}`" />
+    <Head :title="`Consultar Estado de Reclamación | ${empresa.name}`">
+        <meta name="description" :content="`Consulte en línea el estado de trámite de su queja o reclamo presentado ante ${empresa.name} (${empresa.razon_social}). Ingrese su número de hoja y documento de identidad.`" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" :content="`Consultar Estado de Reclamación | ${empresa.name}`" />
+        <meta property="og:description" :content="`Seguimiento en línea de reclamos y quejas para clientes de ${empresa.name}.`" />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" :content="empresa.logo_path || '/faviconDLR.png'" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" :content="`Consultar Estado de Reclamación | ${empresa.name}`" />
+        <meta name="twitter:description" :content="`Seguimiento de hoja de reclamación en ${empresa.name}.`" />
+        <meta name="twitter:image" :content="empresa.logo_path || '/faviconDLR.png'" />
+    </Head>
 
     <div class="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased font-sans selection:bg-blue-100 selection:text-blue-700 py-10 px-4 sm:px-6 lg:px-8 flex flex-col justify-between">
         <div class="max-w-3xl mx-auto w-full space-y-6">

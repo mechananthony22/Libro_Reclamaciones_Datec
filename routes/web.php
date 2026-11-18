@@ -140,31 +140,33 @@ Route::middleware(['tenant.access'])->group(function () {
     Route::delete('configuracion/establecimientos/{establecimiento}', [EstablecimientoController::class, 'destroy'])
         ->name('empresa.establecimientos.destroy');
 
-    // Gestión de Usuarios y Roles de la Empresa
-    Route::get('configuracion/usuarios', [UsuarioController::class, 'index'])
-        ->name('empresa.usuarios.index');
-    Route::post('configuracion/usuarios/invitar', [UsuarioController::class, 'invitar'])
-        ->name('empresa.usuarios.invitar');
-    Route::put('configuracion/usuarios/{usuario}/rol', [UsuarioController::class, 'cambiarRol'])
-        ->name('empresa.usuarios.rol');
-    Route::patch('configuracion/usuarios/{usuario}/toggle', [UsuarioController::class, 'toggleActivo'])
-        ->name('empresa.usuarios.toggle');
-    Route::delete('configuracion/usuarios/{usuario}', [UsuarioController::class, 'desvincular'])
-        ->name('empresa.usuarios.desvincular');
-    Route::post('configuracion/usuarios/invitaciones/{invitacion}/reenviar', [UsuarioController::class, 'reenviarInvitacion'])
-        ->name('empresa.usuarios.invitaciones.reenviar');
-    Route::delete('configuracion/usuarios/invitaciones/{invitacion}', [UsuarioController::class, 'cancelarInvitacion'])
-        ->name('empresa.usuarios.invitaciones.cancelar');
+    // Gestión de Usuarios y Roles de la Empresa (Control de Rol: Solo Administrador de Empresa)
+    Route::middleware('admin.empresa')->group(function () {
+        Route::get('configuracion/usuarios', [UsuarioController::class, 'index'])
+            ->name('empresa.usuarios.index');
+        Route::post('configuracion/usuarios/invitar', [UsuarioController::class, 'invitar'])
+            ->name('empresa.usuarios.invitar');
+        Route::put('configuracion/usuarios/{usuario}/rol', [UsuarioController::class, 'cambiarRol'])
+            ->name('empresa.usuarios.rol');
+        Route::patch('configuracion/usuarios/{usuario}/toggle', [UsuarioController::class, 'toggleActivo'])
+            ->name('empresa.usuarios.toggle');
+        Route::delete('configuracion/usuarios/{usuario}', [UsuarioController::class, 'desvincular'])
+            ->name('empresa.usuarios.desvincular');
+        Route::post('configuracion/usuarios/invitaciones/{invitacion}/reenviar', [UsuarioController::class, 'reenviarInvitacion'])
+            ->name('empresa.usuarios.invitaciones.reenviar');
+        Route::delete('configuracion/usuarios/invitaciones/{invitacion}', [UsuarioController::class, 'cancelarInvitacion'])
+            ->name('empresa.usuarios.invitaciones.cancelar');
 
-    // Historial de Auditoría del Tenant (Aislamiento estricto por empresa)
-    Route::get('configuracion/auditoria', [EmpresaAuditoriaController::class, 'index'])
-        ->name('empresa.auditoria.index');
-    Route::get('configuracion/auditoria/exportar', [EmpresaAuditoriaController::class, 'exportar'])
-        ->name('empresa.auditoria.exportar');
-    Route::get('empresa/auditoria', [EmpresaAuditoriaController::class, 'index'])
-        ->name('empresa.auditoria.alias');
-    Route::get('empresa/auditoria/exportar', [EmpresaAuditoriaController::class, 'exportar'])
-        ->name('empresa.auditoria.alias.exportar');
+        // Historial de Auditoría del Tenant (Aislamiento estricto por empresa)
+        Route::get('configuracion/auditoria', [EmpresaAuditoriaController::class, 'index'])
+            ->name('empresa.auditoria.index');
+        Route::get('configuracion/auditoria/exportar', [EmpresaAuditoriaController::class, 'exportar'])
+            ->name('empresa.auditoria.exportar');
+        Route::get('empresa/auditoria', [EmpresaAuditoriaController::class, 'index'])
+            ->name('empresa.auditoria.alias');
+        Route::get('empresa/auditoria/exportar', [EmpresaAuditoriaController::class, 'exportar'])
+            ->name('empresa.auditoria.alias.exportar');
+    });
 
     // Configuración de Destinatarios y Alertas de Notificación
     Route::get('configuracion/notificaciones', [NotificacionConfigController::class, 'edit'])

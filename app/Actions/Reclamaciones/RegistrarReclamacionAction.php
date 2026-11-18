@@ -128,7 +128,6 @@ class RegistrarReclamacionAction
                     'numero_hoja' => $reclamacion->numero_hoja,
                     'tipo' => $reclamacion->tipo->value,
                     'tipo_bien' => $reclamacion->tipo_bien->value,
-                    'consumidor' => $datosConsumidor,
                     'detalle_problema' => $reclamacion->detalle_problema,
                     'pedido_consumidor' => $reclamacion->pedido_consumidor,
                     'proveedor_snapshot' => $datosLegalesSnapshot,
@@ -158,9 +157,11 @@ class RegistrarReclamacionAction
                 }
             }
 
-            // Despachar tareas asíncronas de envío de correo
-            EnviarConstanciaReclamacionJob::dispatch($reclamacion);
-            NotificarNuevaReclamacionEmpresaJob::dispatch($reclamacion);
+            // Despachar tareas asíncronas de envío de correo únicamente tras confirmar la transacción (afterCommit)
+            DB::afterCommit(function () use ($reclamacion) {
+                EnviarConstanciaReclamacionJob::dispatch($reclamacion);
+                NotificarNuevaReclamacionEmpresaJob::dispatch($reclamacion);
+            });
 
             // P1-10: Verificación y registro de exceso de cuota mensual contratada
             $limite = $empresa->limite_reclamaciones_mes;

@@ -14,10 +14,18 @@ class RegistrarReclamacionRequest extends FormRequest
 {
     /**
      * Determina si el usuario tiene autorización para realizar la solicitud.
-     * Al ser un formulario público de libre acceso, se autoriza a cualquier visitante.
+     * Al ser un formulario público de libre acceso, se autoriza a cualquier visitante,
+     * siempre que la empresa proveedora cumpla los requisitos legales obligatorios.
      */
     public function authorize(): bool
     {
+        /** @var Empresa|null $empresa */
+        $empresa = Empresa::current();
+
+        if ($empresa && ! $empresa->tieneMinimosLegales()) {
+            abort(503, 'El Libro de Reclamaciones de esta empresa se encuentra en proceso de configuración legal obligatoria.');
+        }
+
         return true;
     }
 

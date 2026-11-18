@@ -27,7 +27,9 @@ class EnviarRespuestaReclamacionJob implements ShouldQueue
     public function __construct(
         public Reclamacion $reclamacion,
         public ReclamacionRespuesta $respuesta
-    ) {}
+    ) {
+        $this->afterCommit = true;
+    }
 
     public function handle(): void
     {

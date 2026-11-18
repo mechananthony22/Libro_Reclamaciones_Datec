@@ -54,8 +54,8 @@ class LibroReclamacionesController extends Controller
             ])->toResponse(request())->setStatusCode(503);
         }
 
-        // Validar que la empresa proveedora cuente con la información legal mínima obligatoria antes de publicar
-        if (empty($empresa->ruc) || empty($empresa->razon_social) || empty($empresa->direccion)) {
+        // Validar que la empresa proveedora cumpla los requisitos legales mínimos (RUC, razón social, dirección y contacto)
+        if (! $empresa->tieneMinimosLegales()) {
             abort(503, 'El Libro de Reclamaciones de esta empresa se encuentra en proceso de configuración legal obligatoria.');
         }
 
@@ -126,6 +126,10 @@ class LibroReclamacionesController extends Controller
             abort(503, $empresa->contingencia_mensaje ?: 'El servicio de registro se encuentra temporalmente en contingencia. Por favor utilice nuestros canales alternativos.');
         }
 
+        if (! $empresa->tieneMinimosLegales()) {
+            abort(503, 'El Libro de Reclamaciones de esta empresa se encuentra en proceso de configuración legal obligatoria.');
+        }
+
         $validated = $request->validated();
 
         $adjuntos = $request->hasFile('adjuntos') ? $request->file('adjuntos') : [];
@@ -176,7 +180,7 @@ class LibroReclamacionesController extends Controller
                 'tipo' => $reclamacion->tipo->value,
                 'tipo_label' => $reclamacion->tipo->label(),
                 'tipo_bien_label' => $reclamacion->tipo_bien->label(),
-                'fecha_hora' => $reclamacion->fecha_hora?->format('d/m/Y H:i:s') ?? now()->format('d/m/Y H:i:s'),
+                'fecha_hora' => $reclamacion->fecha_hora?->format('d/m/Y H:i:s') ?? $reclamacion->created_at?->format('d/m/Y H:i:s') ?? '',
                 'vence_en' => $reclamacion->vence_en?->format('d/m/Y') ?? '',
                 'consumidor_nombre' => $nombreConsumidor,
                 'consumidor_email' => $consumidor['email'] ?? '',

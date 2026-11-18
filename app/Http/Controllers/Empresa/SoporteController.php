@@ -9,6 +9,7 @@ use App\Models\SoporteAutorizacion;
 use App\Services\AuditoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
@@ -88,35 +89,39 @@ class SoporteController extends Controller
         $conceder = (bool) ($datos['conceder_acceso_inmediato'] ?? false);
         $user = $request->user();
 
-        // Generar código correlativo de ticket
-        $codigoTicket = SoporteAutorizacion::generarCodigoTicket();
+        // Generar código correlativo de ticket y persistir atómicamente con auditoría
+        $ticket = DB::transaction(function () use ($empresa, $user, $datos, $horas, $conceder) {
+            $codigoTicket = SoporteAutorizacion::generarCodigoTicket();
 
-        $ticket = SoporteAutorizacion::create([
-            'empresa_id' => $empresa->id,
-            'codigo_ticket' => $codigoTicket,
-            'titulo' => $datos['titulo'],
-            'motivo' => $datos['motivo'],
-            'solicitado_por_id' => $user?->id,
-            'estado' => $conceder ? 'autorizado' : 'pendiente',
-            'horas_vigencia' => $horas,
-            'autorizado_por_id' => $conceder ? $user?->id : null,
-            'autorizado_en' => $conceder ? now() : null,
-            'valido_hasta' => $conceder ? now()->addHours($horas) : null,
-        ]);
-
-        $this->auditoriaService->registrar(
-            'ticket_soporte_creado',
-            'soporte',
-            "Ticket de soporte técnico {$ticket->codigo_ticket} creado para {$empresa->name} (Acceso delegado: ".($conceder ? "Autorizado por {$horas}h" : 'Pendiente').')',
-            [
+            $ticket = SoporteAutorizacion::create([
                 'empresa_id' => $empresa->id,
-                'datos_despues' => [
-                    'codigo_ticket' => $ticket->codigo_ticket,
-                    'estado' => $ticket->estado,
-                    'horas' => $horas,
-                ],
-            ]
-        );
+                'codigo_ticket' => $codigoTicket,
+                'titulo' => $datos['titulo'],
+                'motivo' => $datos['motivo'],
+                'solicitado_por_id' => $user?->id,
+                'estado' => $conceder ? 'autorizado' : 'pendiente',
+                'horas_vigencia' => $horas,
+                'autorizado_por_id' => $conceder ? $user?->id : null,
+                'autorizado_en' => $conceder ? now() : null,
+                'valido_hasta' => $conceder ? now()->addHours($horas) : null,
+            ]);
+
+            $this->auditoriaService->registrar(
+                'ticket_soporte_creado',
+                'soporte',
+                "Ticket de soporte técnico {$ticket->codigo_ticket} creado para {$empresa->name} (Acceso delegado: ".($conceder ? "Autorizado por {$horas}h" : 'Pendiente').')',
+                [
+                    'empresa_id' => $empresa->id,
+                    'datos_despues' => [
+                        'codigo_ticket' => $ticket->codigo_ticket,
+                        'estado' => $ticket->estado,
+                        'horas' => $horas,
+                    ],
+                ]
+            );
+
+            return $ticket;
+        });
 
         $mensaje = $conceder
             ? "Ticket {$ticket->codigo_ticket} registrado y acceso delegado concedido por {$horas} horas."

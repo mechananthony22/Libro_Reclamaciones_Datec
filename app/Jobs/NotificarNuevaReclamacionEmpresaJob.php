@@ -26,7 +26,9 @@ class NotificarNuevaReclamacionEmpresaJob implements ShouldQueue
 
     public function __construct(
         public Reclamacion $reclamacion
-    ) {}
+    ) {
+        $this->afterCommit = true;
+    }
 
     public function handle(): void
     {

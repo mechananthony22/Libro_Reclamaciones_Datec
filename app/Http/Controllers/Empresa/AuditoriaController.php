@@ -59,18 +59,18 @@ class AuditoriaController extends Controller
         $empresa = Empresa::current();
 
         $query = $this->construirQuery($request, $empresa);
-        $logs = $query->get();
+        $totalRegistros = (clone $query)->count();
 
         // Registrar auditoría del reporte de trazabilidad descargado
         app(AuditoriaService::class)->registrar(
             accion: 'auditoria_exportada',
             modulo: 'seguridad',
-            descripcion: "Exportación de la bitácora de auditoría en formato CSV (Total: {$logs->count()} registros)",
+            descripcion: "Exportación de la bitácora de auditoría en formato CSV (Total: {$totalRegistros} registros)",
             opciones: [
                 'empresa_id' => $empresa->id,
                 'user' => $request->user(),
                 'datos_despues' => [
-                    'total_registros' => $logs->count(),
+                    'total_registros' => $totalRegistros,
                     'filtros' => $request->only(['modulo', 'buscar', 'fecha_desde', 'fecha_hasta']),
                 ],
             ]
@@ -79,7 +79,7 @@ class AuditoriaController extends Controller
         $timestamp = now('America/Lima')->format('Ymd_His');
         $nombreArchivo = "auditoria_{$empresa->ruc}_{$timestamp}.csv";
 
-        return response()->streamDownload(function () use ($logs) {
+        return response()->streamDownload(function () use ($query) {
             $handle = fopen('php://output', 'w');
             // BOM UTF-8 para apertura correcta en Microsoft Excel y software de auditoría
             fwrite($handle, "\xEF\xBB\xBF");
@@ -98,7 +98,8 @@ class AuditoriaController extends Controller
                 'Datos Posteriores (Snapshot)',
             ]);
 
-            foreach ($logs as $log) {
+            // Transmisión con cursor(): memoria O(1) constante sin cargar toda la colección en RAM
+            foreach ($query->cursor() as $log) {
                 fputcsv($handle, [
                     $log->id,
                     $log->created_at?->setTimezone('America/Lima')->format('Y-m-d H:i:s'),

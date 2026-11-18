@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\EstadoEmpresa;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
@@ -80,6 +81,7 @@ class LoginController extends Controller
         $primeraEmpresa = $user->empresas()
             ->wherePivot('activo', true)
             ->where('tenants.activo', true)
+            ->where('tenants.estado', EstadoEmpresa::Activa->value)
             ->first();
 
         if ($primeraEmpresa) {
@@ -97,12 +99,22 @@ class LoginController extends Controller
                 ->with('success', "Bienvenido al panel de administración de {$primeraEmpresa->name}.");
         }
 
+        // P3-14: Verificar si la denegación es por empresa suspendida
+        $tieneEmpresaSuspendida = $user->empresas()
+            ->wherePivot('activo', true)
+            ->where('tenants.estado', EstadoEmpresa::Suspendida->value)
+            ->exists();
+
         // Usuario registrado sin asignación activa a empresas: cerrar sesión para no dejar estado autenticado fantasma
         Auth::guard('web')->logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();
 
+        $mensajeError = $tieneEmpresaSuspendida
+            ? 'El acceso ha sido denegado porque la empresa asociada se encuentra suspendida.'
+            : 'Esta cuenta no se encuentra registrada en ninguna empresa activa o fue dada de baja.';
+
         return redirect()->route('login')
-            ->withErrors(['email' => 'Esta cuenta no se encuentra registrada en ninguna empresa activa o fue dada de baja.']);
+            ->withErrors(['email' => $mensajeError]);
     }
 }

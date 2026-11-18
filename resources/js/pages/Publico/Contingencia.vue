@@ -43,7 +43,12 @@ const formatearFecha = (fechaIso: string | null): string | null => {
 
 <template>
     <Head :title="`Aviso de Contingencia - ${empresa.razon_social || empresa.name}`">
-        <meta name="robots" content="noindex, nofollow" />
+        <meta name="description" :content="`Aviso oficial de contingencia técnica del Libro de Reclamaciones Virtual de ${empresa.name}. Descargue el formulario alternativo de atención de emergencias.`" />
+        <meta name="robots" content="noindex, follow" />
+        <meta property="og:title" :content="`Aviso de Contingencia - ${empresa.name}`" />
+        <meta property="og:description" :content="`Canal de contingencia técnica de ${empresa.name} conforme a directivas de INDECOPI.`" />
+        <meta property="og:image" :content="empresa.logo_path || '/faviconDLR.png'" />
+        <meta name="twitter:card" content="summary" />
     </Head>
 
     <div class="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased font-sans selection:bg-blue-100 selection:text-blue-700 flex flex-col justify-between">

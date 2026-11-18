@@ -23,12 +23,34 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'is_superadmin'])]
+#[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * Llena el modelo con atributos, protegiendo estrictamente 'is_superadmin' contra
+     * escalada de privilegios por asignación masiva en peticiones web HTTP (CWE-915).
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return $this
+     */
+    public function fill(array $attributes): static
+    {
+        $superadminValue = $attributes['is_superadmin'] ?? null;
+        unset($attributes['is_superadmin']);
+
+        parent::fill($attributes);
+
+        // Solo permitir asignación directa en entorno de pruebas automatizadas o consola/seeders
+        if ($superadminValue !== null && (app()->runningInConsole() || app()->environment('testing'))) {
+            $this->is_superadmin = (bool) $superadminValue;
+        }
+
+        return $this;
+    }
 
     /**
      * Get the attributes that should be cast.

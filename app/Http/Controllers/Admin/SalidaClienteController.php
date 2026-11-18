@@ -8,6 +8,7 @@ use App\Services\SalidaClienteService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
@@ -56,17 +57,20 @@ class SalidaClienteController extends Controller
      */
     public function descargarPaquete(Empresa $empresa): BinaryFileResponse
     {
-        $directorio = storage_path("app/custodia/{$empresa->id}");
-        $archivos = is_dir($directorio) ? glob("{$directorio}/*.zip") : [];
+        $disco = Storage::disk('local');
+        $directorio = "custodia/{$empresa->id}";
+        $archivos = $disco->exists($directorio)
+            ? collect($disco->files($directorio))->filter(fn ($f) => str_ends_with($f, '.zip'))->values()->all()
+            : [];
 
         if (empty($archivos)) {
             $paquete = $this->salidaClienteService->generarPaqueteCustodia($empresa, Auth::user());
             $archivoPath = $paquete['path'];
             $archivoNombre = $paquete['filename'];
         } else {
-            // Tomar el más reciente
-            usort($archivos, fn ($a, $b) => filemtime($b) <=> filemtime($a));
-            $archivoPath = $archivos[0];
+            // Tomar el más reciente por última fecha de modificación en disco
+            usort($archivos, fn ($a, $b) => $disco->lastModified($b) <=> $disco->lastModified($a));
+            $archivoPath = $disco->path($archivos[0]);
             $archivoNombre = basename($archivoPath);
         }
 

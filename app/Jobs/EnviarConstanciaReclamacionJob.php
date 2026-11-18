@@ -35,7 +35,9 @@ class EnviarConstanciaReclamacionJob implements ShouldQueue
      */
     public function __construct(
         public Reclamacion $reclamacion
-    ) {}
+    ) {
+        $this->afterCommit = true;
+    }
 
     /**
      * Ejecuta la tarea de envío del correo con la constancia PDF adjunta.

@@ -198,3 +198,45 @@ test('el acceso por enlace temporal firmado falla si la firma ha expirado o es i
 
     $response->assertForbidden();
 });
+
+test('la fecha y hora mostrada no usa now() dinamico sino la fecha persistida del reclamo', function () {
+    $fechaFija = now()->subDays(5);
+
+    $reclamacionHistorica = Reclamacion::create([
+        'empresa_id' => $this->empresa->id,
+        'establecimiento_id' => $this->establecimiento->id,
+        'numero_hoja' => '00000099-2026',
+        'fecha_hora' => $fechaFija,
+        'tipo' => TipoReclamacion::Reclamo,
+        'tipo_bien' => TipoBien::Servicio,
+        'descripcion_bien' => 'Servicio Historico',
+        'detalle_problema' => 'Problema historico',
+        'pedido_consumidor' => 'Solucion historica',
+        'datos_consumidor' => [
+            'tipo_documento' => 'dni',
+            'numero_documento' => '47896541',
+            'nombres' => 'Juan Carlos',
+            'email' => 'juan@ejemplo.com',
+        ],
+        'datos_legales_snapshot' => ['razon_social' => 'DATEC PERU S.A.C.', 'ruc' => '20123456789'],
+        'estado' => EstadoReclamacion::Pendiente,
+        'vence_en' => now()->addDays(10),
+        'token_consulta' => Str::random(40),
+        'aviso_privacidad_version' => '1.0',
+        'aviso_privacidad_aceptado_en' => now(),
+    ]);
+
+    $urlFirmada = URL::temporarySignedRoute(
+        'libro.consulta.firmada',
+        now()->addMinutes(30),
+        ['slug' => $this->empresa->slug, 'token' => $reclamacionHistorica->token_consulta]
+    );
+
+    $response = $this->get($urlFirmada);
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Publico/ConsultaEstado')
+        ->where('expediente.fecha_hora', $fechaFija->format('d/m/Y H:i:s'))
+    );
+});

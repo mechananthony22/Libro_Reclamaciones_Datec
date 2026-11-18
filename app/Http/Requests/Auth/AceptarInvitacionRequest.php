@@ -20,7 +20,7 @@ class AceptarInvitacionRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'password' => ['required', 'string', 'confirmed', Password::defaults()],
         ];
     }
 }

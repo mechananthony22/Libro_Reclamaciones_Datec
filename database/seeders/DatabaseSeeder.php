@@ -63,10 +63,10 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Superadmin Datec',
                 'password' => Hash::make('password123'),
-                'is_superadmin' => true,
                 'email_verified_at' => now(),
             ]
         );
+        $superAdmin->forceFill(['is_superadmin' => true])->save();
 
         // 4. Crear el Administrador de Prueba 1 (Asignado a Datec Consulting)
         $adminDatec = User::updateOrCreate(

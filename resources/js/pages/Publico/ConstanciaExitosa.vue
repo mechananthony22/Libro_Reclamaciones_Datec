@@ -49,7 +49,15 @@ function copiarToken() {
 </script>
 
 <template>
-    <Head :title="`Constancia Registrada | ${reclamacion.numero_hoja} - ${empresa.name}`" />
+    <Head :title="`Constancia Registrada | ${reclamacion.numero_hoja} - ${empresa.name}`">
+        <meta name="description" :content="`Constancia oficial de registro del reclamo o queja ${reclamacion.numero_hoja} ante ${empresa.name}. Descargue su constancia probatoria en formato PDF.`" />
+        <meta name="robots" content="noindex, nofollow" />
+        <meta property="og:title" :content="`Constancia de Reclamación ${reclamacion.numero_hoja} - ${empresa.name}`" />
+        <meta property="og:description" :content="`Su reclamo ha sido registrado satisfactoriamente en el Libro de Reclamaciones de ${empresa.name}.`" />
+        <meta property="og:type" content="article" />
+        <meta property="og:image" :content="empresa.logo_path || '/faviconDLR.png'" />
+        <meta name="twitter:card" content="summary" />
+    </Head>
 
     <div class="min-h-screen bg-[#FBFDFF] text-slate-800 antialiased font-sans selection:bg-blue-100 selection:text-blue-700 py-12 px-4 sm:px-6 lg:px-8 flex flex-col justify-center items-center relative overflow-hidden">
         <!-- Luces de fondo decorativas -->

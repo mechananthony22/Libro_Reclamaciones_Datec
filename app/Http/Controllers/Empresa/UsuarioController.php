@@ -37,6 +37,8 @@ class UsuarioController extends Controller
             abort(403, 'No tienes una empresa activa asignada.');
         }
 
+        $this->validarAdminEmpresa($request, $empresa);
+
         // Obtener los usuarios asociados exclusivamente a esta empresa (RF-007, RF-011)
         $usuarios = $empresa->usuarios()
             ->select('users.id', 'users.name', 'users.email')
@@ -68,11 +70,24 @@ class UsuarioController extends Controller
                 'expirada' => $inv->isExpired(),
             ]);
 
-        $rolesDisponibles = array_map(fn (RolEmpresa $r) => [
-            'value' => $r->value,
-            'label' => $r->label(),
-            'descripcion' => $r->descripcion(),
-        ], RolEmpresa::cases());
+        $tieneAdminActivo = $empresa->usuarios()
+            ->wherePivot('rol', RolEmpresa::AdminEmpresa->value)
+            ->wherePivot('activo', true)
+            ->exists();
+
+        $rolesDisponibles = array_map(function (RolEmpresa $r) use ($tieneAdminActivo) {
+            $esAdmin = $r === RolEmpresa::AdminEmpresa;
+
+            return [
+                'value' => $r->value,
+                'label' => $r->label(),
+                'descripcion' => $r->descripcion(),
+                'disponible_para_invitar' => ! ($esAdmin && $tieneAdminActivo),
+                'motivo_bloqueo' => ($esAdmin && $tieneAdminActivo)
+                    ? 'La empresa ya cuenta con un Administrador Titular activo. Para salvaguardar la titularidad legal, no es posible invitar a un segundo administrador que desplace al titular.'
+                    : null,
+            ];
+        }, RolEmpresa::cases());
 
         return Inertia::render('Empresa/Usuarios/Index', [
             'empresa' => [
@@ -99,8 +114,17 @@ class UsuarioController extends Controller
             abort(404, 'Empresa no encontrada.');
         }
 
+        $this->validarAdminEmpresa($request, $empresa);
+
         $email = strtolower(trim($request->validated('email')));
         $rol = RolEmpresa::from($request->validated('rol'));
+
+        // Criterio de seguridad legal: Prohibir invitar a un segundo administrador que desplace al titular
+        if ($rol === RolEmpresa::AdminEmpresa && $empresa->usuarios()->wherePivot('rol', RolEmpresa::AdminEmpresa->value)->wherePivot('activo', true)->exists()) {
+            return back()->withErrors([
+                'rol' => 'La empresa ya cuenta con un Administrador Titular activo. Para salvaguardar la titularidad legal, no es posible invitar a un segundo administrador que desplace al titular.',
+            ]);
+        }
 
         // Criterio de aceptación RF-011: Comprobar si el usuario ya está activo en la empresa
         $yaEsMiembro = $empresa->usuarios()
@@ -152,13 +176,37 @@ class UsuarioController extends Controller
             abort(404, 'Empresa no encontrada.');
         }
 
+        $this->validarAdminEmpresa($request, $empresa);
+
         // Criterio de aceptación RF-011: Asegurar que el usuario pertenezca al tenant actual
-        $miembro = $empresa->usuarios()->where('user_id', $usuario->id)->exists();
-        if (! $miembro) {
+        $pivote = $empresa->usuarios()->where('user_id', $usuario->id)->first();
+        if (! $pivote) {
             abort(403, 'Acceso denegado: el usuario no pertenece a esta empresa.');
         }
 
         $nuevoRol = RolEmpresa::from($request->validated('rol'));
+
+        // Proteger la titularidad única del administrador de empresa
+        if ($nuevoRol === RolEmpresa::AdminEmpresa) {
+            $otroAdmin = $empresa->usuarios()
+                ->wherePivot('rol', RolEmpresa::AdminEmpresa->value)
+                ->wherePivot('activo', true)
+                ->where('users.id', '!=', $usuario->id)
+                ->exists();
+
+            if ($otroAdmin) {
+                return back()->withErrors([
+                    'rol' => 'La empresa ya cuenta con un Administrador Titular activo. Para transferir la titularidad legal, comuníquese con el soporte técnico de Datec.',
+                ]);
+            }
+        }
+
+        // No permitir degradar el rol del Administrador Titular activo
+        if ($pivote->pivot->rol === RolEmpresa::AdminEmpresa->value && $nuevoRol !== RolEmpresa::AdminEmpresa) {
+            return back()->withErrors([
+                'rol' => 'No es posible degradar el rol del Administrador Titular de la empresa.',
+            ]);
+        }
 
         $empresa->usuarios()->updateExistingPivot($usuario->id, [
             'rol' => $nuevoRol->value,
@@ -186,6 +234,8 @@ class UsuarioController extends Controller
             abort(404, 'Empresa no encontrada.');
         }
 
+        $this->validarAdminEmpresa($request, $empresa);
+
         $pivote = $empresa->usuarios()->where('user_id', $usuario->id)->first();
         if (! $pivote) {
             abort(403, 'El usuario no pertenece a esta empresa.');
@@ -194,6 +244,11 @@ class UsuarioController extends Controller
         // Seguridad: El usuario no puede desactivarse a sí mismo
         if ($usuario->id === $request->user()?->id) {
             return back()->withErrors(['error' => 'No puedes desactivar tu propia cuenta en la empresa.']);
+        }
+
+        // Proteger al Administrador Titular de ser desactivado
+        if ($pivote->pivot->rol === RolEmpresa::AdminEmpresa->value && $pivote->pivot->activo) {
+            return back()->withErrors(['error' => 'No es posible desactivar la cuenta del Administrador Titular de la empresa.']);
         }
 
         $nuevoEstado = ! (bool) $pivote->pivot->activo;
@@ -219,8 +274,20 @@ class UsuarioController extends Controller
             abort(404, 'Empresa no encontrada.');
         }
 
+        $this->validarAdminEmpresa($request, $empresa);
+
+        $pivote = $empresa->usuarios()->where('user_id', $usuario->id)->first();
+        if (! $pivote) {
+            abort(403, 'El usuario no pertenece a esta empresa.');
+        }
+
         if ($usuario->id === $request->user()?->id) {
             return back()->withErrors(['error' => 'No puedes desvincular tu propia cuenta. Solicita a otro administrador que lo realice.']);
+        }
+
+        // Proteger al Administrador Titular de ser desvinculado
+        if ($pivote->pivot->rol === RolEmpresa::AdminEmpresa->value) {
+            return back()->withErrors(['error' => 'No es posible desvincular al Administrador Titular de la empresa.']);
         }
 
         $empresa->usuarios()->detach($usuario->id);
@@ -239,6 +306,8 @@ class UsuarioController extends Controller
         if (! $empresa || $invitacion->empresa_id !== $empresa->id) {
             abort(403, 'Invitación no autorizada.');
         }
+
+        $this->validarAdminEmpresa(request(), $empresa);
 
         DB::transaction(function () use ($invitacion, $empresa) {
             $invitacion->update([
@@ -276,8 +345,36 @@ class UsuarioController extends Controller
             abort(403, 'Invitación no autorizada.');
         }
 
+        $this->validarAdminEmpresa(request(), $empresa);
+
         $invitacion->delete();
 
         return back()->with('success', 'Invitación cancelada.');
+    }
+
+    /**
+     * Validación estricta de que el usuario autenticado posee rol de Administrador de la Empresa o Superadmin.
+     */
+    protected function validarAdminEmpresa(Request $request, Empresa $empresa): void
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            abort(401);
+        }
+
+        if ($user->isSuperAdmin()) {
+            return;
+        }
+
+        $esAdmin = $user->empresas()
+            ->where('tenants.id', $empresa->id)
+            ->wherePivot('rol', RolEmpresa::AdminEmpresa->value)
+            ->wherePivot('activo', true)
+            ->exists();
+
+        if (! $esAdmin) {
+            abort(403, 'Acceso denegado: Solo el Administrador de la Empresa puede gestionar usuarios, invitaciones y roles.');
+        }
     }
 }

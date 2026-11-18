@@ -218,7 +218,7 @@ class ConsultaEstadoController extends Controller
             'monto_reclamado' => $reclamacion->monto_reclamado ? "{$reclamacion->moneda} {$reclamacion->monto_reclamado}" : null,
             'estado' => $reclamacion->estado->value,
             'estado_label' => ucfirst($reclamacion->estado->value),
-            'fecha_hora' => $reclamacion->fecha_hora?->format('d/m/Y H:i:s') ?? now()->format('d/m/Y H:i:s'),
+            'fecha_hora' => $reclamacion->fecha_hora?->format('d/m/Y H:i:s') ?? $reclamacion->created_at?->format('d/m/Y H:i:s') ?? '',
             'vence_en' => $reclamacion->vence_en?->format('d/m/Y') ?? '',
             'consumidor_nombre' => $nombreCompleto,
             'consumidor_email' => $emailEnmascarado,

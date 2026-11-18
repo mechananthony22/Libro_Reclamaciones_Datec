@@ -201,3 +201,88 @@ test('un usuario sin empresas asignadas recibe 403 y mantiene su sesion autentic
     $this->actingAs($usuarioHuerfano)->get('/configuracion/personalizacion')->assertForbidden();
     $this->actingAs($usuarioHuerfano)->get('/configuracion/empresa')->assertForbidden();
 });
+
+test('el login rechaza el acceso si la empresa del usuario se encuentra suspendida', function () {
+    $empresaSuspendida = Empresa::create([
+        'name' => 'Empresa Suspendida Test',
+        'slug' => 'empresa-suspendida-test',
+        'razon_social' => 'Empresa Suspendida S.A.C.',
+        'ruc' => '20999888777',
+        'direccion' => 'Av. Suspendida 123',
+        'estado' => EstadoEmpresa::Suspendida,
+        'plan' => PlanEmpresa::Basico,
+        'activo' => true,
+    ]);
+
+    $usuario = User::create([
+        'name' => 'Admin Suspendido',
+        'email' => 'admin@suspendida.pe',
+        'password' => Hash::make('password123'),
+        'is_superadmin' => false,
+    ]);
+
+    $usuario->empresas()->attach($empresaSuspendida->id, [
+        'rol' => RolEmpresa::AdminEmpresa->value,
+        'activo' => true,
+    ]);
+
+    $response = $this->post(route('login'), [
+        'email' => 'admin@suspendida.pe',
+        'password' => 'password123',
+    ]);
+
+    $this->assertGuest();
+    $response->assertSessionHasErrors(['email']);
+    expect(session('errors')->first('email'))->toContain('suspendida');
+});
+
+test('un usuario con empresa suspendida y activa es redirigido a su empresa activa', function () {
+    $empresaSuspendida = Empresa::create([
+        'name' => 'Empresa Uno Suspendida',
+        'slug' => 'empresa-uno-suspendida',
+        'razon_social' => 'Empresa Uno Suspendida S.A.C.',
+        'ruc' => '20111222333',
+        'direccion' => 'Av. Uno 123',
+        'estado' => EstadoEmpresa::Suspendida,
+        'plan' => PlanEmpresa::Basico,
+        'activo' => true,
+    ]);
+
+    $empresaActiva = Empresa::create([
+        'name' => 'Empresa Dos Activa',
+        'slug' => 'empresa-dos-activa',
+        'razon_social' => 'Empresa Dos Activa S.A.C.',
+        'ruc' => '20444555666',
+        'direccion' => 'Av. Dos 456',
+        'estado' => EstadoEmpresa::Activa,
+        'plan' => PlanEmpresa::Basico,
+        'activo' => true,
+    ]);
+
+    $usuarioMulti = User::create([
+        'name' => 'Usuario Multi Empresa',
+        'email' => 'multi@empresas.pe',
+        'password' => Hash::make('password123'),
+        'is_superadmin' => false,
+    ]);
+
+    $usuarioMulti->empresas()->attach([
+        $empresaSuspendida->id => ['rol' => RolEmpresa::AdminEmpresa->value, 'activo' => true],
+        $empresaActiva->id => ['rol' => RolEmpresa::AdminEmpresa->value, 'activo' => true],
+    ]);
+
+    $response = $this->post(route('login'), [
+        'email' => 'multi@empresas.pe',
+        'password' => 'password123',
+    ]);
+
+    $this->assertAuthenticatedAs($usuarioMulti);
+    $response->assertRedirect(route('empresa.dashboard'));
+    expect(session('current_tenant_id'))->toBe($empresaActiva->id);
+});
+
+test('is_superadmin no es fillable en el modelo User para prevenir escalada de privilegios', function () {
+    $user = new User;
+    expect($user->isFillable('is_superadmin'))->toBeFalse();
+    expect($user->getFillable())->not->toContain('is_superadmin');
+});

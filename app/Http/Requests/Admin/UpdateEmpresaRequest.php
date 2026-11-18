@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\EstadoEmpresa;
 use App\Enums\PlanEmpresa;
+use App\Services\SlugReconfigurationService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,6 +37,7 @@ class UpdateEmpresaRequest extends FormRequest
                 'string',
                 'max:100',
                 'alpha_dash',
+                Rule::notIn(SlugReconfigurationService::PALABRAS_RESERVADAS),
                 Rule::unique('tenants', 'slug')->ignore($empresaId),
                 Rule::unique('empresa_slug_historial', 'slug_antiguo')->where(fn ($q) => $q->where('empresa_id', '!=', $empresaId)),
             ],
@@ -51,6 +53,21 @@ class UpdateEmpresaRequest extends FormRequest
             'limite_reclamaciones_mes' => ['nullable', 'integer', 'min:1'],
             'vigencia_desde' => ['nullable', 'date'],
             'vigencia_hasta' => ['nullable', 'date', 'after_or_equal:vigencia_desde'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'ruc.digits' => 'El RUC debe tener exactamente 11 dígitos numéricos.',
+            'ruc.regex' => 'El RUC debe comenzar con 10 o 20 conforme a la normativa SUNAT.',
+            'ruc.unique' => 'Este RUC ya se encuentra registrado para otra empresa.',
+            'slug.unique' => 'El enlace permanente (slug) ya está en uso por otra empresa.',
+            'slug.not_in' => 'El enlace permanente (slug) coincide con una palabra reservada del sistema y no puede ser utilizado.',
+            'vigencia_hasta.after_or_equal' => 'La fecha de fin de vigencia debe ser posterior o igual a la fecha de inicio.',
         ];
     }
 }

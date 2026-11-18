@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Enums\EstadoEmpresa;
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -61,6 +63,38 @@ class LoginRequest extends FormRequest
             throw ValidationException::withMessages([
                 'email' => 'Las credenciales proporcionadas no coinciden con nuestros registros.',
             ]);
+        }
+
+        /** @var User $user */
+        $user = Auth::user();
+
+        // P3-14: Si el usuario no es Superadmin Datec, validar que su empresa no esté suspendida o inactiva
+        if (! $user->isSuperAdmin()) {
+            $tieneEmpresaActiva = $user->empresas()
+                ->wherePivot('activo', true)
+                ->where('tenants.activo', true)
+                ->where('tenants.estado', EstadoEmpresa::Activa->value)
+                ->exists();
+
+            if (! $tieneEmpresaActiva) {
+                $tieneEmpresaSuspendida = $user->empresas()
+                    ->wherePivot('activo', true)
+                    ->where('tenants.estado', EstadoEmpresa::Suspendida->value)
+                    ->exists();
+
+                Auth::guard('web')->logout();
+                RateLimiter::hit($this->throttleKey());
+
+                if ($tieneEmpresaSuspendida) {
+                    throw ValidationException::withMessages([
+                        'email' => 'El acceso ha sido denegado porque la empresa asociada se encuentra suspendida.',
+                    ]);
+                }
+
+                throw ValidationException::withMessages([
+                    'email' => 'Esta cuenta no se encuentra registrada en ninguna empresa activa o fue dada de baja.',
+                ]);
+            }
         }
 
         RateLimiter::clear($this->throttleKey());

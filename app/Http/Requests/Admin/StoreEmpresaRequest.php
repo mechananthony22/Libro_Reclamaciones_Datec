@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\EstadoEmpresa;
 use App\Enums\PlanEmpresa;
+use App\Services\SlugReconfigurationService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -29,7 +30,15 @@ class StoreEmpresaRequest extends FormRequest
                 'regex:/^(10|20)[0-9]{9}$/',
                 'unique:tenants,ruc',
             ],
-            'slug' => ['nullable', 'string', 'max:100', 'alpha_dash', 'unique:tenants,slug', 'unique:empresa_slug_historial,slug_antiguo'],
+            'slug' => [
+                'nullable',
+                'string',
+                'max:100',
+                'alpha_dash',
+                Rule::notIn(SlugReconfigurationService::PALABRAS_RESERVADAS),
+                'unique:tenants,slug',
+                'unique:empresa_slug_historial,slug_antiguo',
+            ],
             'direccion' => ['required', 'string', 'max:500'],
             'email' => ['nullable', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:30'],
@@ -55,6 +64,7 @@ class StoreEmpresaRequest extends FormRequest
             'ruc.regex' => 'El RUC debe comenzar con 10 o 20 conforme a la normativa SUNAT.',
             'ruc.unique' => 'Este RUC ya se encuentra registrado para otra empresa.',
             'slug.unique' => 'El enlace permanente (slug) ya está en uso por otra empresa.',
+            'slug.not_in' => 'El enlace permanente (slug) coincide con una palabra reservada del sistema y no puede ser utilizado.',
             'vigencia_hasta.after_or_equal' => 'La fecha de fin de vigencia debe ser posterior o igual a la fecha de inicio.',
         ];
     }

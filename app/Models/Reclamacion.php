@@ -67,7 +67,7 @@ class Reclamacion extends Model
             'tipo_bien' => TipoBien::class,
             'estado' => EstadoReclamacion::class,
             'monto_reclamado' => 'decimal:2',
-            'datos_consumidor' => 'array',
+            'datos_consumidor' => 'encrypted:array',
             'datos_legales_snapshot' => 'array',
         ];
     }
@@ -79,10 +79,11 @@ class Reclamacion extends Model
     protected static function booted(): void
     {
         static::creating(function (Reclamacion $reclamacion) {
+            $reclamacion->fecha_hora ??= now();
+
             if (empty($reclamacion->vence_en)) {
-                $fechaBase = $reclamacion->fecha_hora ?? now();
                 $reclamacion->vence_en = app(PlazoReclamacionService::class)
-                    ->calcularFechaVencimiento($fechaBase, 15);
+                    ->calcularFechaVencimiento($reclamacion->fecha_hora, 15);
             }
         });
 

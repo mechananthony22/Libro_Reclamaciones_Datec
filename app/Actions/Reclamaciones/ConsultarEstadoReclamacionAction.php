@@ -23,12 +23,18 @@ class ConsultarEstadoReclamacionAction
     ): ?array {
         $reclamacion = Reclamacion::where('empresa_id', $empresa->id)
             ->where('numero_hoja', trim($numeroReclamacion))
-            ->where('datos_consumidor->tipo_documento', $tipoDocumento)
-            ->where('datos_consumidor->numero_documento', trim($numeroDocumento))
             ->with(['establecimiento', 'respuestas' => fn ($q) => $q->latest()])
             ->first();
 
         if (! $reclamacion) {
+            return null;
+        }
+
+        $consumidor = $reclamacion->datos_consumidor ?? [];
+        $consumidorTipo = (string) ($consumidor['tipo_documento'] ?? '');
+        $consumidorNumero = trim((string) ($consumidor['numero_documento'] ?? ''));
+
+        if ($consumidorTipo !== $tipoDocumento || $consumidorNumero !== trim($numeroDocumento)) {
             return null;
         }
 

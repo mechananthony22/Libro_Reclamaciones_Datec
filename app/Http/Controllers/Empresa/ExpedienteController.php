@@ -50,27 +50,33 @@ class ExpedienteController extends Controller
         $query = Reclamacion::where('empresa_id', $empresaId)
             ->with(['establecimiento:id,codigo,nombre', 'responsable:id,name,email']);
 
-        // Filtro por término de búsqueda (número de hoja, nombres, apellidos o documento del consumidor)
+        // Filtro por término de búsqueda (número de hoja, comprobante, nombres, apellidos o documento del consumidor)
         if ($buscar = trim((string) $request->input('buscar', ''))) {
             $esPgsql = config('database.default') === 'pgsql';
             $likeOperador = $esPgsql ? 'ilike' : 'like';
             $termino = strtolower($buscar);
 
-            $query->where(function ($q) use ($termino, $buscar, $likeOperador, $esPgsql) {
-                $q->where('numero_hoja', $likeOperador, "%{$buscar}%")
-                    ->orWhere('numero_comprobante', $likeOperador, "%{$buscar}%");
+            // Al estar datos_consumidor cifrado en reposo (AES-256), se evalúa la coincidencia del consumidor en memoria para el tenant
+            $matchingIds = Reclamacion::where('empresa_id', $empresaId)
+                ->get(['id', 'datos_consumidor'])
+                ->filter(function ($rec) use ($termino) {
+                    $c = $rec->datos_consumidor ?? [];
+                    $nombres = strtolower((string) ($c['nombres'] ?? ''));
+                    $apellidos = strtolower((string) ($c['apellidos'] ?? ''));
+                    $numDoc = strtolower((string) ($c['numero_documento'] ?? ''));
+                    $email = strtolower((string) ($c['email'] ?? ''));
 
-                if ($esPgsql) {
-                    $q->orWhereRaw("datos_consumidor->>'nombres' ilike ?", ["%{$buscar}%"])
-                        ->orWhereRaw("datos_consumidor->>'apellidos' ilike ?", ["%{$buscar}%"])
-                        ->orWhereRaw("datos_consumidor->>'numero_documento' ilike ?", ["%{$buscar}%"])
-                        ->orWhereRaw("datos_consumidor->>'email' ilike ?", ["%{$buscar}%"]);
-                } else {
-                    $q->orWhereRaw("lower(json_extract(datos_consumidor, '$.nombres')) like ?", ["%{$termino}%"])
-                        ->orWhereRaw("lower(json_extract(datos_consumidor, '$.apellidos')) like ?", ["%{$termino}%"])
-                        ->orWhereRaw("lower(json_extract(datos_consumidor, '$.numero_documento')) like ?", ["%{$termino}%"])
-                        ->orWhereRaw("lower(json_extract(datos_consumidor, '$.email')) like ?", ["%{$termino}%"]);
-                }
+                    return str_contains($nombres, $termino)
+                        || str_contains($apellidos, $termino)
+                        || str_contains($numDoc, $termino)
+                        || str_contains($email, $termino);
+                })
+                ->pluck('id');
+
+            $query->where(function ($q) use ($buscar, $likeOperador, $matchingIds) {
+                $q->where('numero_hoja', $likeOperador, "%{$buscar}%")
+                    ->orWhere('numero_comprobante', $likeOperador, "%{$buscar}%")
+                    ->orWhereIn('id', $matchingIds);
             });
         }
 

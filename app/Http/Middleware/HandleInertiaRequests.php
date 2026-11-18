@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\RolEmpresa;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -43,6 +44,10 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user,
+                'es_admin_empresa' => fn () => $user && (
+                    $user->isSuperAdmin() ||
+                    (Empresa::current() && $user->empresas()->where('tenants.id', Empresa::current()->id)->wherePivot('rol', RolEmpresa::AdminEmpresa->value)->wherePivot('activo', true)->exists())
+                ),
                 'empresa_actual' => fn () => Empresa::current() ? [
                     'id' => Empresa::current()->id,
                     'name' => Empresa::current()->name,

@@ -21,7 +21,7 @@ class RestablecerPasswordRequest extends FormRequest
         return [
             'email' => ['required', 'email', 'max:255'],
             'codigo' => ['required', 'string', 'size:6'],
-            'password' => ['required', 'string', 'confirmed', Password::min(8)],
+            'password' => ['required', 'string', 'confirmed', Password::defaults()],
         ];
     }
 

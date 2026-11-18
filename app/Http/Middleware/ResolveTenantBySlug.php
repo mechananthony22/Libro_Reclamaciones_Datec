@@ -40,17 +40,6 @@ class ResolveTenantBySlug
                     }
                 }
 
-                // Si no se encuentra como slug vigente, verificar si corresponde a un slug histórico para redirección 301
-                if (! $currentTenant) {
-                    $empresaHistorica = app(SlugReconfigurationService::class)->obtenerRedireccionSiExiste($slug);
-                    if ($empresaHistorica) {
-                        $currentUri = $request->getRequestUri();
-                        $targetUri = preg_replace('#^/l/'.preg_quote($slug, '#').'(\b|/|$)#', '/l/'.$empresaHistorica->slug.'$1', $currentUri);
-
-                        return redirect($targetUri, 301);
-                    }
-                }
-
                 $currentTenant?->makeCurrent();
             }
         }

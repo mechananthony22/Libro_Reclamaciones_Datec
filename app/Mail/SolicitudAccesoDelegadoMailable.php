@@ -45,4 +45,3 @@ class SolicitudAccesoDelegadoMailable extends Mailable
         );
     }
 }
-

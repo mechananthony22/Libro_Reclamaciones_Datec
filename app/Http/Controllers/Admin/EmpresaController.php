@@ -15,6 +15,7 @@ use App\Services\AuditoriaService;
 use App\Services\SlugReconfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -32,9 +33,11 @@ class EmpresaController extends Controller
             ->withCount('usuarios');
 
         if ($busqueda !== '') {
-            $query->where(function ($q) use ($busqueda) {
-                $q->where('name', 'ilike', "%{$busqueda}%")
-                    ->orWhere('razon_social', 'ilike', "%{$busqueda}%")
+            $like = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+
+            $query->where(function ($q) use ($busqueda, $like) {
+                $q->where('name', $like, "%{$busqueda}%")
+                    ->orWhere('razon_social', $like, "%{$busqueda}%")
                     ->orWhere('ruc', 'like', "%{$busqueda}%")
                     ->orWhere('slug', 'like', "%{$busqueda}%");
             });
@@ -89,7 +92,10 @@ class EmpresaController extends Controller
             $baseSlug = Str::slug($datos['name']);
             $slug = $baseSlug;
             $contador = 1;
-            while (Empresa::where('slug', $slug)->exists()) {
+            while (
+                Empresa::where('slug', $slug)->exists() ||
+                in_array($slug, SlugReconfigurationService::PALABRAS_RESERVADAS, true)
+            ) {
                 $slug = "{$baseSlug}-{$contador}";
                 $contador++;
             }
@@ -100,23 +106,27 @@ class EmpresaController extends Controller
         $datos['activo'] = ($estadoEnum === EstadoEmpresa::Activa);
         $datos['estado_suscripcion'] = EstadoSuscripcion::Activa;
 
-        $empresa = Empresa::create($datos);
+        $empresa = DB::transaction(function () use ($datos) {
+            $empresa = Empresa::create($datos);
 
-        // Crear automáticamente la Sede Principal con la dirección legal registrada
-        $empresa->establecimientos()->create([
-            'codigo' => 'SEDE-01',
-            'nombre' => 'Sede Principal',
-            'direccion' => $empresa->direccion ?: 'Sede Central',
-            'es_principal' => true,
-            'activo' => true,
-        ]);
+            // Crear automáticamente la Sede Principal con la dirección legal registrada
+            $empresa->establecimientos()->create([
+                'codigo' => 'SEDE-01',
+                'nombre' => 'Sede Principal',
+                'direccion' => $empresa->direccion ?: 'Sede Central',
+                'es_principal' => true,
+                'activo' => true,
+            ]);
 
-        app(AuditoriaService::class)->registrar(
-            'empresa_creada',
-            'empresas',
-            "Alta de nueva empresa: {$empresa->name} (RUC: {$empresa->ruc}, Plan: {$empresa->plan->value})",
-            ['empresa_id' => $empresa->id, 'datos_despues' => $datos]
-        );
+            app(AuditoriaService::class)->registrar(
+                'empresa_creada',
+                'empresas',
+                "Alta de nueva empresa: {$empresa->name} (RUC: {$empresa->ruc}, Plan: {$empresa->plan->value})",
+                ['empresa_id' => $empresa->id, 'datos_despues' => $datos]
+            );
+
+            return $empresa;
+        });
 
         return redirect()
             ->route('admin.empresas.index')

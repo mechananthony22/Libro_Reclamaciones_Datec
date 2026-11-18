@@ -7,6 +7,7 @@ const flash = computed(() => (page.props.flash as any) || {});
 const auth = computed(() => (page.props.auth as any) || {});
 const usuario = computed(() => auth.value.user);
 const esSuperAdmin = computed(() => !!usuario.value?.is_superadmin);
+const esAdminEmpresa = computed(() => !!auth.value.es_admin_empresa || esSuperAdmin.value);
 
 const empresaActual = computed(() => auth.value.empresa_actual);
 const empresasUsuario = computed(() => (auth.value.empresas_usuario as any[]) || []);
@@ -535,7 +536,7 @@ if (flash.value.success) {
                         </Link>
 
                         <Link
-                            v-if="HABILITAR_MODULO_USUARIOS"
+                            v-if="HABILITAR_MODULO_USUARIOS && esAdminEmpresa"
                             href="/configuracion/usuarios"
                             :class="[
                                 'group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition',
@@ -551,7 +552,7 @@ if (flash.value.success) {
                         </Link>
 
                         <Link
-                            v-if="HABILITAR_MODULO_AUDITORIA_EMPRESA"
+                            v-if="HABILITAR_MODULO_AUDITORIA_EMPRESA && esAdminEmpresa"
                             href="/configuracion/auditoria"
                             :class="[
                                 'group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition',

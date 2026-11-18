@@ -9,6 +9,7 @@ use App\Models\SoporteAutorizacion;
 use App\Services\AuditoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
@@ -89,17 +90,34 @@ class SoporteController extends Controller
         $empresa = Empresa::findOrFail($datos['empresa_id']);
         $user = $request->user();
 
-        $codigoTicket = SoporteAutorizacion::generarCodigoTicket();
+        $ticket = DB::transaction(function () use ($empresa, $user, $datos) {
+            $codigoTicket = SoporteAutorizacion::generarCodigoTicket();
 
-        $ticket = SoporteAutorizacion::create([
-            'empresa_id' => $empresa->id,
-            'codigo_ticket' => $codigoTicket,
-            'titulo' => $datos['titulo'],
-            'motivo' => $datos['motivo'],
-            'solicitado_por_id' => $user?->id,
-            'estado' => 'pendiente',
-            'horas_vigencia' => (int) ($datos['horas_vigencia'] ?? 24),
-        ]);
+            $ticket = SoporteAutorizacion::create([
+                'empresa_id' => $empresa->id,
+                'codigo_ticket' => $codigoTicket,
+                'titulo' => $datos['titulo'],
+                'motivo' => $datos['motivo'],
+                'solicitado_por_id' => $user?->id,
+                'estado' => 'pendiente',
+                'horas_vigencia' => (int) ($datos['horas_vigencia'] ?? 24),
+            ]);
+
+            $this->auditoriaService->registrar(
+                'solicitud_acceso_delegado_creada',
+                'soporte',
+                "Superadmin {$user?->name} solicitó acceso delegado de soporte a {$empresa->name} (Ticket {$ticket->codigo_ticket})",
+                [
+                    'empresa_id' => $empresa->id,
+                    'datos_despues' => [
+                        'codigo_ticket' => $ticket->codigo_ticket,
+                        'motivo' => $datos['motivo'],
+                    ],
+                ]
+            );
+
+            return $ticket;
+        });
 
         // Notificar por correo a los administradores de la empresa sobre la solicitud de acceso delegado
         $destinatarios = $empresa->destinatariosNotificaciones();
@@ -117,19 +135,6 @@ class SoporteController extends Controller
                 Log::error("[SOPORTE DATEC] Error al notificar solicitud de acceso a empresa {$empresa->id}: {$e->getMessage()}");
             }
         }
-
-        $this->auditoriaService->registrar(
-            'solicitud_acceso_delegado_creada',
-            'soporte',
-            "Superadmin {$user?->name} solicitó acceso delegado de soporte a {$empresa->name} (Ticket {$ticket->codigo_ticket})",
-            [
-                'empresa_id' => $empresa->id,
-                'datos_despues' => [
-                    'codigo_ticket' => $ticket->codigo_ticket,
-                    'motivo' => $datos['motivo'],
-                ],
-            ]
-        );
 
         return back()->with('success', "Solicitud de acceso delegado {$ticket->codigo_ticket} generada para {$empresa->name}. Requiere autorización del cliente.");
     }

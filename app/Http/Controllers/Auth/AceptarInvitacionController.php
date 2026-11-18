@@ -7,8 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\AceptarInvitacionRequest;
 use App\Models\InvitacionEmpresa;
 use App\Models\User;
+use App\Services\AuditoriaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -71,81 +73,89 @@ class AceptarInvitacionController extends Controller
         $empresa = $invitacion->empresa;
         $emailNuevo = strtolower(trim($invitacion->email));
 
-        if ($invitacion->rol === RolEmpresa::AdminEmpresa) {
-            // 1. Buscar si la empresa ya tiene una cuenta de administrador registrada
-            $adminActual = $empresa->usuarios()
-                ->wherePivot('rol', RolEmpresa::AdminEmpresa->value)
-                ->first();
+        $user = DB::transaction(function () use ($request, $invitacion, $empresa, $emailNuevo) {
+            if ($invitacion->rol === RolEmpresa::AdminEmpresa) {
+                // 1. Buscar si la empresa ya tiene un administrador registrado
+                $adminActual = $empresa->usuarios()
+                    ->wherePivot('rol', RolEmpresa::AdminEmpresa->value)
+                    ->first();
 
-            $usuarioExistenteConNuevoEmail = User::where('email', $emailNuevo)->first();
-
-            if ($adminActual && ! $usuarioExistenteConNuevoEmail) {
-                // Caso A: Se actualiza directamente la cuenta existente del administrador con el nuevo correo y contraseña
-                $user = $adminActual;
-                $user->email = $emailNuevo;
-                $user->name = $request->validated('name');
-                $user->password = Hash::make($request->validated('password'));
-                $user->save();
-            } else {
-                // Caso B: El nuevo correo ya pertenecía a un registro o no había admin previo
-                $user = $usuarioExistenteConNuevoEmail ?: new User(['email' => $emailNuevo]);
+                // 2. Crear o actualizar la cuenta del nuevo usuario sin sobrescribir ni desplazar la identidad del titular previo
+                $user = User::where('email', $emailNuevo)->first() ?: new User(['email' => $emailNuevo]);
                 $user->name = $request->validated('name');
                 $user->password = Hash::make($request->validated('password'));
                 $user->save();
 
-                // Desvincular y limpiar la cuenta anterior si era diferente para que no queden 2 cuentas de administrador
+                // 3. Desvincular al administrador anterior del tenant preservando su cuenta y registro pericial
                 if ($adminActual && $adminActual->id !== $user->id) {
                     $empresa->usuarios()->detach($adminActual->id);
-                    if (! $adminActual->isSuperAdmin() && $adminActual->empresas()->count() === 0) {
-                        $adminActual->delete();
-                    }
                 }
+
+                // Desvincular cualquier otro usuario que tuviera rol admin_empresa en este tenant
+                $otrosAdmins = $empresa->usuarios()
+                    ->wherePivot('rol', RolEmpresa::AdminEmpresa->value)
+                    ->where('users.id', '!=', $user->id)
+                    ->get();
+
+                foreach ($otrosAdmins as $otro) {
+                    $empresa->usuarios()->detach($otro->id);
+                }
+
+                // Vincular/asegurar que este usuario es el único admin_empresa activo de la empresa
+                $empresa->usuarios()->syncWithoutDetaching([
+                    $user->id => [
+                        'rol' => RolEmpresa::AdminEmpresa->value,
+                        'activo' => true,
+                    ],
+                ]);
+
+                // Sincronizar datos oficiales en la ficha de la empresa
+                $empresa->update([
+                    'representante_nombre' => $user->name,
+                    'representante_email' => $user->email,
+                    'email' => $user->email,
+                ]);
+            } else {
+                // Flujo estándar para operadores / supervisores de empresa
+                $user = User::firstOrNew(['email' => $emailNuevo]);
+                $user->name = $request->validated('name');
+                $user->password = Hash::make($request->validated('password'));
+                $user->save();
+
+                $empresa->usuarios()->syncWithoutDetaching([
+                    $user->id => [
+                        'rol' => $invitacion->rol->value,
+                        'activo' => true,
+                    ],
+                ]);
             }
 
-            // Desvincular cualquier otro usuario que tuviera rol admin_empresa en este tenant
-            $otrosAdmins = $empresa->usuarios()
-                ->wherePivot('rol', RolEmpresa::AdminEmpresa->value)
-                ->where('users.id', '!=', $user->id)
-                ->get();
+            // Marcar la invitación como aceptada
+            $invitacion->update(['accepted_at' => now()]);
 
-            foreach ($otrosAdmins as $otro) {
-                $empresa->usuarios()->detach($otro->id);
-                if (! $otro->isSuperAdmin() && $otro->empresas()->count() === 0) {
-                    $otro->delete();
-                }
-            }
+            // Auditoría pericial de aceptación de invitación
+            app(AuditoriaService::class)->registrar(
+                'invitacion_aceptada',
+                'usuarios',
+                "El usuario {$user->name} ({$user->email}) aceptó la invitación con rol \"{$invitacion->rol->label()}\" para la empresa {$empresa->name}.",
+                [
+                    'empresa_id' => $empresa->id,
+                    'user' => $user,
+                    'actor_tipo' => 'usuario',
+                    'actor_nombre' => $user->name,
+                    'actor_email' => $user->email,
+                    'datos_despues' => [
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                        'rol' => $invitacion->rol->value,
+                        'empresa_id' => $empresa->id,
+                    ],
+                    'request' => $request,
+                ]
+            );
 
-            // Vincular/asegurar que este usuario es el único admin_empresa activo de la empresa
-            $empresa->usuarios()->syncWithoutDetaching([
-                $user->id => [
-                    'rol' => RolEmpresa::AdminEmpresa->value,
-                    'activo' => true,
-                ],
-            ]);
-
-            // Sincronizar datos oficiales en la ficha de la empresa
-            $empresa->update([
-                'representante_nombre' => $user->name,
-                'representante_email' => $user->email,
-                'email' => $user->email,
-            ]);
-        } else {
-            // Flujo estándar para operadores / supervisores de empresa
-            $user = User::firstOrNew(['email' => $emailNuevo]);
-            $user->name = $request->validated('name');
-            $user->password = Hash::make($request->validated('password'));
-            $user->save();
-
-            $empresa->usuarios()->syncWithoutDetaching([
-                $user->id => [
-                    'rol' => $invitacion->rol->value,
-                    'activo' => true,
-                ],
-            ]);
-        }
-
-        // Marcar la invitación como aceptada
-        $invitacion->update(['accepted_at' => now()]);
+            return $user;
+        });
 
         // Cerrar cualquier sesión previa para garantizar un inicio limpio
         if (Auth::check()) {

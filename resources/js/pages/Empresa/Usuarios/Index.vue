@@ -51,12 +51,13 @@ const showModalInvitar = ref(false);
 const formInvitar = useForm({
     email: '',
     nombre: '',
-    rol: 'admin_empresa',
+    rol: '',
 });
 
 function abrirModalInvitar() {
     formInvitar.reset();
-    formInvitar.rol = 'admin_empresa';
+    const rolInicial = props.roles?.find((r) => r.disponible_para_invitar !== false)?.value || 'gestor_reclamaciones';
+    formInvitar.rol = rolInicial;
     showModalInvitar.value = true;
 }
 
@@ -513,8 +514,13 @@ const claseCampo =
                             required
                             class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                         >
-                            <option v-for="r in roles" :key="r.value" :value="r.value">
-                                {{ r.label }} — {{ r.descripcion }}
+                            <option
+                                v-for="r in roles"
+                                :key="r.value"
+                                :value="r.value"
+                                :disabled="r.disponible_para_invitar === false"
+                            >
+                                {{ r.label }} — {{ r.descripcion }}{{ r.disponible_para_invitar === false ? ' (Titular ya registrado)' : '' }}
                             </option>
                         </select>
                         <p v-if="formInvitar.errors.rol" class="mt-1 text-[11px] text-rose-600 font-semibold">{{ formInvitar.errors.rol }}</p>
@@ -594,8 +600,13 @@ const claseCampo =
                             required
                             class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
                         >
-                            <option v-for="r in roles" :key="r.value" :value="r.value">
-                                {{ r.label }} — {{ r.descripcion }}
+                            <option
+                                v-for="r in roles"
+                                :key="r.value"
+                                :value="r.value"
+                                :disabled="r.disponible_para_invitar === false"
+                            >
+                                {{ r.label }} — {{ r.descripcion }}{{ r.disponible_para_invitar === false ? ' (Titular ya registrado)' : '' }}
                             </option>
                         </select>
                         <p v-if="formRol.errors.rol" class="mt-1 text-[11px] text-rose-600 font-semibold">{{ formRol.errors.rol }}</p>

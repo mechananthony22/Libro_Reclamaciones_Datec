@@ -124,24 +124,23 @@ class SalidaClienteService
     {
         $this->validarRequisitosPlataforma();
 
-        $directorioDestino = storage_path("app/custodia/{$empresa->id}");
-        if (! is_dir($directorioDestino)) {
-            mkdir($directorioDestino, 0755, true);
+        $disco = Storage::disk('local');
+        $directorioDestino = "custodia/{$empresa->id}";
+        if (! $disco->exists($directorioDestino)) {
+            $disco->makeDirectory($directorioDestino);
         }
 
         // Limpieza de paquetes huérfanos anteriores de la misma empresa para proteger el espacio en disco
-        $archivosPrevios = glob("{$directorioDestino}/custodia_*.zip");
-        if ($archivosPrevios) {
-            foreach ($archivosPrevios as $archivoViejo) {
-                if (file_exists($archivoViejo)) {
-                    @unlink($archivoViejo);
-                }
+        $archivosPrevios = $disco->files($directorioDestino);
+        foreach ($archivosPrevios as $archivoViejo) {
+            if (str_ends_with($archivoViejo, '.zip') && str_contains(basename($archivoViejo), 'custodia_')) {
+                $disco->delete($archivoViejo);
             }
         }
 
         $timestamp = now()->format('Ymd_His');
         $filename = "custodia_{$empresa->ruc}_{$timestamp}.zip";
-        $zipPath = "{$directorioDestino}/{$filename}";
+        $zipPath = $disco->path("{$directorioDestino}/{$filename}");
 
         $zip = new ZipArchive;
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
@@ -193,9 +192,10 @@ class SalidaClienteService
 
             // Adjuntar archivos de soporte cargados si existen físicamente en disco
             foreach ($rec->adjuntos as $adjunto) {
-                if ($adjunto->ruta_archivo && Storage::disk('local')->exists($adjunto->ruta_archivo)) {
-                    $nombreAdjunto = $adjunto->nombre_original ?: basename($adjunto->ruta_archivo);
-                    $zip->addFromString("adjuntos/{$rec->numero_hoja}/{$nombreAdjunto}", Storage::disk('local')->get($adjunto->ruta_archivo));
+                $ruta = $adjunto->storage_path ?? $adjunto->ruta_archivo;
+                if ($ruta && Storage::disk('local')->exists($ruta)) {
+                    $nombreAdjunto = $adjunto->nombre_original ?: basename($ruta);
+                    $zip->addFromString("adjuntos/{$rec->numero_hoja}/{$nombreAdjunto}", Storage::disk('local')->get($ruta));
                 }
             }
 
